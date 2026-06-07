@@ -1,0 +1,111 @@
+/* Body font: Geist Sans — closest open-licence match to Anthropic Sans (Claude's
+   reading font). Tighter than Inter, taller x-height than Söhne. Self-hosted via
+   Google Fonts CDN. If we ever obtain Anthropic Sans .woff2 files, drop them in
+   apps/web/public/fonts/ and add @font-face declarations above this @import. */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm-tinted near-white canvas + soft near-black */
+    --background: 60 20% 99%;        /* #FCFCFB */
+    --foreground: 0 0% 13%;          /* #212121 */
+
+    --card: 0 0% 100%;                /* #FFFFFF — slight elevation above background */
+    --card-foreground: 0 0% 13%;     /* #212121 */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+
+    --primary: 15 56% 52%;           /* Terracotta #c96442 */
+    --primary-foreground: 48 33% 97%;
+
+    --secondary: 50 21% 89%;         /* Warm Sand #e8e6dc */
+    --secondary-foreground: 48 3% 29%;
+
+    --muted: 48 25% 92%;             /* Border Cream #f0eee6 */
+    --muted-foreground: 48 7% 36%;   /* Olive Gray #5e5d59 */
+
+    --accent: 50 21% 89%;
+    --accent-foreground: 48 3% 29%;
+
+    --destructive: 0 56% 45%;        /* Error Crimson */
+    --destructive-foreground: 48 33% 97%;
+
+    --border: 48 25% 92%;
+    --input: 48 25% 92%;
+    --ring: 208 83% 57%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Geist matches Claude.ai's reading rhythm closely. The font-feature
+       settings turn on contextual alternates + tabular numerals so numbers
+       in tables line up. */
+    font-family: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss03", "tnum";
+    font-size: 15px;          /* up from browser default 16px-ish — closer to claude.ai body */
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Tabular figures in any data context (tables, score chips, version pills) */
+  table, .tabular-nums, code, kbd {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Mono surface: Geist Mono for code blocks, ids, decision badges */
+  code, pre, kbd, samp {
+    font-family: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  /* Warm-toned scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.3);
+  }
+}
+
+@layer utilities {
+  .prose-warm {
+    --tw-prose-body: hsl(0 0% 13%);
+    --tw-prose-headings: hsl(0 0% 13%);
+    --tw-prose-links: hsl(15 56% 52%);
+    --tw-prose-bold: hsl(0 0% 13%);
+    --tw-prose-bullets: hsl(48 25% 75%);
+    --tw-prose-hr: hsl(48 25% 92%);
+    --tw-prose-quotes: hsl(48 7% 36%);
+    --tw-prose-quote-borders: hsl(15 56% 52%);
+    --tw-prose-th-borders: hsl(48 25% 92%);
+    --tw-prose-td-borders: hsl(48 25% 92%);
+  }
+
+  .dot-bg {
+    background-image: radial-gradient(
+      circle,
+      hsl(var(--muted-foreground) / 0.18) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+  }
+}

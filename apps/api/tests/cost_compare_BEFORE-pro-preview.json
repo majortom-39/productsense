@@ -1,0 +1,22 @@
+{
+  "label": "BEFORE-pro-preview",
+  "r1": {
+    "prompt_tokens": 21045,
+    "completion_tokens": 87,
+    "cached_tokens": 0,
+    "thoughts_tokens": 933,
+    "cost": 0.02674125,
+    "latency_s": 12.516745299999457,
+    "model": "gemini-3.1-pro-preview"
+  },
+  "r2": {
+    "prompt_tokens": 21045,
+    "completion_tokens": 38,
+    "cached_tokens": 0,
+    "thoughts_tokens": 982,
+    "cost": 0.02649625,
+    "latency_s": 10.406201600002532,
+    "model": "gemini-3.1-pro-preview"
+  },
+  "avg_cost": 0.02661875
+}

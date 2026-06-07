@@ -1,0 +1,155 @@
+{
+  "summary": {
+    "turns": 5,
+    "total_dispatches": 16,
+    "tool_counts": {
+      "invoke_theo": 4,
+      "invoke_aiden": 1,
+      "pin_artifact": 5,
+      "log_decision": 4,
+      "invoke_hugo": 1,
+      "invoke_wes": 1
+    },
+    "prd_versions": 0,
+    "sprint_count": 0,
+    "task_count": 0,
+    "decision_count": 7,
+    "live_research_count": 5,
+    "agent_run_count": 7,
+    "errors": []
+  },
+  "phases": [
+    {
+      "phase": "P1 duplicate sprint",
+      "ok": true,
+      "evidence": "invoke_kai called 0 time(s); sprints=[]"
+    },
+    {
+      "phase": "P2 decisions supersession",
+      "ok": true,
+      "evidence": "log_decision called 4x, decisions=7, contradiction pairs=none"
+    },
+    {
+      "phase": "P3 PRD section_id drift",
+      "ok": true,
+      "evidence": "duplicate first-token sections per PRD version: none"
+    },
+    {
+      "phase": "P4 multi-sprint shaping",
+      "ok": true,
+      "evidence": "0 sprint(s), 0 task(s) \u2014 OK"
+    },
+    {
+      "phase": "P5 deployment runtime surfaced",
+      "ok": true,
+      "evidence": "deploy-related signal in decisions=True, in transcript=True"
+    },
+    {
+      "phase": "P6 ack before slow tools",
+      "ok": false,
+      "evidence": "0/5 slow-dispatch turns preceded by ack text"
+    },
+    {
+      "phase": "P7 pacing (no UI sketch turn 1-2)",
+      "ok": true,
+      "evidence": "no early sketch"
+    },
+    {
+      "phase": "P8 PRD draft gate",
+      "ok": true,
+      "evidence": "invoke_nora at turn indices []"
+    },
+    {
+      "phase": "P9 research curation",
+      "ok": true,
+      "evidence": "5 live cards, dupe titles=none"
+    },
+    {
+      "phase": "P10 dup live indicator",
+      "ok": true,
+      "evidence": "frontend-only; not exercised in this harness"
+    },
+    {
+      "phase": "P11 guardrails out of PRD",
+      "ok": true,
+      "evidence": "PRD versions with \u00a7Guardrails section: none"
+    }
+  ],
+  "quality": [
+    {
+      "dim": "PRD shape",
+      "ok": false,
+      "evidence": "no PRD drafted"
+    },
+    {
+      "dim": "Decisions logged",
+      "ok": true,
+      "evidence": "7 decisions"
+    },
+    {
+      "dim": "Research curated",
+      "ok": true,
+      "evidence": "5 live cards (pinned/synthesized)"
+    },
+    {
+      "dim": "Sub-agent dispatches",
+      "ok": true,
+      "evidence": "invoke_theo=4, invoke_aiden=1, pin_artifact=5, log_decision=4, invoke_hugo=1, invoke_wes=1"
+    },
+    {
+      "dim": "Sprint shape",
+      "ok": false,
+      "evidence": "0 sprint(s), 0 task(s)"
+    }
+  ],
+  "score": 0.9090909090909091,
+  "scenario": "Creator audio app \u2014 live podcast highlight clipper",
+  "scenario_file": "01_creator_audio_app.json",
+  "project_id": "0d3a8258-593e-471b-8f4d-5a1ef5afbdea",
+  "transcript": [
+    {
+      "role": "maya",
+      "content": "Hey, I'm Maya. Tell me a bit about the product you're looking to build."
+    },
+    {
+      "role": "founder",
+      "content": "Hi Maya, good to meet you. I'm a journalist by trade, and I've been running my own podcast for a bit, but the post-production for social media is killing me. \n\nI want to build a tool that listens to my interviews as they happen and automatically picks out those \"gold\" moments\u2014like a 45-second clip\u2014so I can post them to social media the second I hit stop. I'm tired of digging through hours of audio."
+    },
+    {
+      "role": "maya",
+      "content": "Good news and a slight reality check on the tech.\n\nThe good news: Aiden confirmed your instinct. The big players (OpusClip, Descript) all force you to manually upload your massive file *after* the interview and wait. Riverside lets you manually mark moments live, but doesn't auto-extract them until later. If we can make this feel instant, we win. I pinned the competitor map to your Research tab.\n\nThe reality check: Theo looked at the stack. Trying to have the AI analyze the audio *while* you're speaking is a trap. It only sees 30-second chunks, so it misses the context of a long thought and cuts off the punchline. \n\nThe fix: We record the audio directly in the browser. The second you hit stop, we fire it to Deepgram (which transcribes an hour of audio in under 60 seconds) and Claude 3.5 Sonnet to find the quotes. You wait about one minute, and your clips are ready. No manual uploading, no 20-minute processing queues.\n\nDoes a 60-second wait after you hit stop still solve the pain for you?"
+    },
+    {
+      "role": "founder",
+      "content": "A 60-second wait is totally fine\u2014honestly, compared to the hours I spend now, one minute feels like magic. \n\nBut I\u2019m curious about the \"gold moments\" part. How does the AI actually know what makes a good social media clip versus just a random paragraph?"
+    },
+    {
+      "role": "maya",
+      "content": "Hugo just confirmed exactly what we suspected, plus a couple of other traps. I've pinned the full breakdown to your Research tab, but here are the three things that kill these tools:\n\n1. **Context Collapse:** The AI finds the punchline but cuts out the setup, so the clip makes no sense to a new listener.\n2. **The Summary Trap:** It optimizes for \"completeness\" instead of emotion or curiosity. \n3. **Frankenstein Cuts:** Tools try to be too smart by removing all silences, which destroys the natural pacing and comedic timing of the interview.\n\nI just had Wes lock these in as guardrails (you can see them on the Decisions tab). When your coding agent writes the extraction prompt, it will explicitly instruct Claude to grab the setup, prioritize hooks over summaries, and leave the natural pauses alone.\n\nNow, a critical question for the MVP scope: Are you recording **video** (like Zoom/Riverside) and we need to handle video files and face-cropping, or are we just dealing with **audio** and generating an audiogram/waveform for social?"
+    },
+    {
+      "role": "founder",
+      "content": "I definitely need video. My audience on Instagram and TikTok expects to see my guest's face, not just a waveform.\n\nIf we're doing video, does that make it much more expensive or slower? I really need to keep the monthly running costs under $30."
+    },
+    {
+      "role": "maya",
+      "content": "Theo just saved us from a massive headache. I've pinned his full breakdown to your Research tab, but here's the short version:\n\nTrying to process a 1-hour video file directly in the browser is a trap\u2014it will crash the tab every time. On the flip side, renting cloud servers to process full 1-hour videos will blow past your $30 budget after just a few dozen episodes.\n\n**The fix:** We do a hybrid. \n1. When you hit stop, the browser extracts just the *audio* and sends it to Deepgram and Claude. \n2. Within 60 seconds, you see the text of your \"gold moments\" on screen. \n3. Once you approve a quote, we send *only* that 60-second video chunk to a cheap, $10/month background server to do the heavy face-cropping and rendering.\n\nThe trade-off: You get to see the quotes almost instantly, but you might have to wait a few minutes for the final vertical video file to finish rendering in the background. \n\nDoes that workflow work for you, or is waiting a few minutes for the final video a dealbreaker?"
+    },
+    {
+      "role": "founder",
+      "content": "Waiting a few minutes for the actual video file is no big deal at all. As long as I know the \"gold\" is caught and I'm not digging through the timeline myself, I'm happy.\n\nQuick question though\u2014is that $10 server included in my $30 budget, or is that on top of it? And what do we use for the actual video editing part if I'm not doing it manually?"
+    },
+    {
+      "role": "maya",
+      "content": "Theo came back with a very clear winner. I pinned the exact stack to your Research tab, but here is the translation:\n\nWe'll use a tool called **Remotion**. It lets your coding agent build the video (the vertical crop, the TikTok-style pop-up captions) using standard web code. It's incredibly cheap to run in the background\u2014about $3 to render 1,000 minutes of video. \n\nWe are explicitly avoiding raw FFmpeg (it's free, but making it do bouncy captions is a math nightmare) and API services like Shotstack (they charge a premium and would eat your $30 budget immediately). \n\nThe only catch: Remotion just draws the video. To know *where* to crop, we'll use a free Google tool called MediaPipe to quickly scan the video for your guest's face and tell Remotion where to center the frame. I've logged this as our official tech stack.\n\nSince we have the problem, the tech, and the budget locked in, let's make sure we're picturing the same app. \n\nI'm picturing a simple two-pane layout:\n*   **Left side:** A big \"Drop Episode Here\" area, plus a list of your past episodes.\n*   **Right side:** Once an episode is processed, you see a feed of \"Gold Moment\" cards. Each card shows the text of the quote, a \"Preview Audio\" button, and a big \"Render Video\" button. \n\nOnce you click \"Render Video,\" it goes to the background and pops out a vertical MP4 a few minutes later. \n\nDoes that layout sound right, or were you picturing a different workflow?"
+    },
+    {
+      "role": "founder",
+      "content": "The layout sounds okay, but wait\u2014earlier we talked about the tool listening to the interview \"as it happens.\" If I have to drop a file in a box at the end, is that different from what we discussed?\n\nI want to make sure I don't have to manually download a giant file from Riverside and then upload it to our tool. Can the app just record my tab or my mic while I'm talking?"
+    },
+    {
+      "role": "maya",
+      "content": "I've updated your Decisions and Research tabs with that workflow. \n\nLet me know if that 10-minute zero-touch wait works for you. If it does, we have the core problem, the tech stack, the budget, and the workflow locked in\u2014and I think we're ready to draft the PRD."
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+# Node
+node_modules/
+dist/
+build/
+.next/
+.cache/
+*.log
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+
+# Env / secrets — never commit
+.env
+.env.*
+!.env.example
+.env.bak
+**/.env
+**/.env.*
+!**/.env.example
+**/credentials.json
+**/service-account*.json
+# MCP server config holds live API keys (LangSmith, Google, etc.)
+.mcp.json
+
+# Local agent / editor config (machine-specific, may hold local paths/secrets)
+.claude/
+
+# Supabase
+supabase/.branches
+supabase/.temp
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Build artifacts
+*.tsbuildinfo
+
+# Test
+coverage/
+.nyc_output/

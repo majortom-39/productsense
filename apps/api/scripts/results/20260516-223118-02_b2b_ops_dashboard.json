@@ -1,0 +1,154 @@
+{
+  "summary": {
+    "turns": 5,
+    "total_dispatches": 11,
+    "tool_counts": {
+      "invoke_theo": 2,
+      "pin_artifact": 1,
+      "log_decision": 6,
+      "invoke_nora": 1,
+      "invoke_kai": 1
+    },
+    "prd_versions": 1,
+    "sprint_count": 2,
+    "task_count": 8,
+    "decision_count": 6,
+    "live_research_count": 1,
+    "agent_run_count": 4,
+    "errors": []
+  },
+  "phases": [
+    {
+      "phase": "P1 duplicate sprint",
+      "ok": true,
+      "evidence": "invoke_kai called 1 time(s); sprints=['Sprint 1: Core Dashboard & Manual Workflows', 'Sprint 2: Automated Pipeline & Predictive AI']"
+    },
+    {
+      "phase": "P2 decisions supersession",
+      "ok": true,
+      "evidence": "log_decision called 6x, decisions=6, contradiction pairs=none"
+    },
+    {
+      "phase": "P3 PRD section_id drift",
+      "ok": false,
+      "evidence": "duplicate first-token sections per PRD version: [(1, ['what'])]"
+    },
+    {
+      "phase": "P4 multi-sprint shaping",
+      "ok": true,
+      "evidence": "2 sprint(s), 8 task(s) \u2014 OK"
+    },
+    {
+      "phase": "P5 deployment runtime surfaced",
+      "ok": true,
+      "evidence": "deploy-related signal in decisions=True, in transcript=True"
+    },
+    {
+      "phase": "P6 ack before slow tools",
+      "ok": false,
+      "evidence": "0/2 slow-dispatch turns preceded by ack text"
+    },
+    {
+      "phase": "P7 pacing (no UI sketch turn 1-2)",
+      "ok": true,
+      "evidence": "no early sketch"
+    },
+    {
+      "phase": "P8 PRD draft gate",
+      "ok": true,
+      "evidence": "invoke_nora at turn indices [4]"
+    },
+    {
+      "phase": "P9 research curation",
+      "ok": true,
+      "evidence": "1 live cards, dupe titles=none"
+    },
+    {
+      "phase": "P10 dup live indicator",
+      "ok": true,
+      "evidence": "frontend-only; not exercised in this harness"
+    },
+    {
+      "phase": "P11 guardrails out of PRD",
+      "ok": true,
+      "evidence": "PRD versions with \u00a7Guardrails section: none"
+    }
+  ],
+  "quality": [
+    {
+      "dim": "PRD shape",
+      "ok": true,
+      "evidence": "v1: 7 sections, 561 words"
+    },
+    {
+      "dim": "Decisions logged",
+      "ok": true,
+      "evidence": "6 decisions"
+    },
+    {
+      "dim": "Research curated",
+      "ok": true,
+      "evidence": "1 live cards (pinned/synthesized)"
+    },
+    {
+      "dim": "Sub-agent dispatches",
+      "ok": true,
+      "evidence": "invoke_theo=2, pin_artifact=1, log_decision=6, invoke_nora=1, invoke_kai=1"
+    },
+    {
+      "dim": "Sprint shape",
+      "ok": true,
+      "evidence": "2 sprint(s), 8 task(s)"
+    }
+  ],
+  "score": 0.8181818181818182,
+  "scenario": "B2B ops dashboard \u2014 Shopify refund forecaster",
+  "scenario_file": "02_b2b_ops_dashboard.json",
+  "project_id": "be372cfd-4832-4be5-a409-0fec845457db",
+  "transcript": [
+    {
+      "role": "maya",
+      "content": "Hey, I'm Maya. Tell me a bit about the product you're looking to build."
+    },
+    {
+      "role": "founder",
+      "content": "Hey Maya. I'm looking to build a dashboard for my ops team to help us get a handle on returns. Basically, I need it to look at our Shopify and Stripe data and tell us how much money we're likely to lose to refunds next week, plus which products are causing the most trouble."
+    },
+    {
+      "role": "maya",
+      "content": "Love this. It's a very clear, measurable pain point. \n\nBefore we map out the data flow from Shopify and Stripe, I want to make sure we're building something actionable, not just a dashboard people look at and close. \n\nIf the dashboard tells your ops team, \"Product X is going to cause $5k in returns next week,\" what do they actually *do* with that information? Are they pulling the listing, warning the supplier, or just holding back cash? \n\nAlso, for the MVP, do you need actual predictive forecasting (which requires a bit more math and historical data), or just a clean view of trailing 30-day return rates projected forward?"
+    },
+    {
+      "role": "founder",
+      "content": "Mainly, they use it to manage cash flow and pause ads on items that are bleeding money. If we see a SKU is spiking in returns, the team needs to know immediately so they can stop spending money to acquire more of those customers.\n\nAs for the math, I'd prefer actual predictive forecasting if possible. Just looking at the last 30 days is what we do now in Excel, and it misses the mark when we have big sales or seasonal shifts. What\u2019s the best way to handle that technically?"
+    },
+    {
+      "role": "maya",
+      "content": "Good news: we can skip building a custom machine learning backend. Setting up Python and forecasting libraries usually bloats the project and slows down the MVP. \n\nInstead, we have two pragmatic paths:\n1. **The API route:** We keep the app simple (just TypeScript) and use a pre-trained forecasting API like Nixtla TimeGPT. We send it your historical Shopify/Stripe data, and it hands back the forecast with seasonality baked in.\n2. **The Data Warehouse route:** If you already dump your Shopify/Stripe data into something like Google BigQuery, we can run the forecast directly in SQL using their built-in ML tools. \n\nWhere does your data live right now? Are we pulling it fresh from the Shopify and Stripe APIs, or do you already have it syncing to a database somewhere?"
+    },
+    {
+      "role": "founder",
+      "content": "We aren't using a data warehouse yet; it's all just sitting in Shopify and Stripe. I'm assuming we'll need to pull it fresh and save it into a database for the dashboard to work.\n\nBetween those two paths, which one keeps us under that $50/month budget? I'm leaning toward whatever is faster to set up, but I'll defer to your recommendation on how to actually store the data and run the math."
+    },
+    {
+      "role": "maya",
+      "content": "Good news. Theo confirmed we can use an API called Nixtla TimeGPT. It has a native TypeScript SDK, handles complex e-commerce seasonality (like Black Friday vs. normal weekly trends) out of the box, and its free tier easily covers a single company's daily SKU volume. It completely avoids the nightmare of trying to deploy custom Python math libraries.\n\nSo the stack is essentially free: **Supabase** (free tier) to store your Shopify/Stripe data, **TimeGPT** (free tier) to run the math, and a simple **Vite + React** frontend for the dashboard. \n\nBefore we write up the spec, let's make sure we're aligned on what the ops team actually sees when they log in. \n\nI'm picturing a single main screen:\n*   **Top strip:** 3 big numbers \u2014 Predicted Return $ Next Week, Current 30-day Return Rate, and the #1 Bleeding SKU right now.\n*   **Middle canvas:** A trend chart showing your historical return volume blending into a dotted line for the TimeGPT forecast.\n*   **Bottom half:** A table of your SKUs ranked by highest predicted return risk, with columns for recent return volume and projected loss, so the team knows exactly what to act on.\n\nDoes that layout give them exactly what they need to pause ads, or is there another data point they look for?"
+    },
+    {
+      "role": "founder",
+      "content": "That layout sounds perfect and hits the main points. One thing\u2014can we make sure the SKU table has a \"Status\" column or something similar where they can see if it\u2019s an active ad campaign? \n\nAlso, how are we handling logins? I'd really like to just use our company Google accounts so I don't have to manage more passwords for the team. If that's settled, let's talk about how the data gets from Shopify into that Supabase database you mentioned."
+    },
+    {
+      "role": "maya",
+      "content": "Google SSO is a great call. I just locked that in\u2014we'll use Supabase's built-in Google Auth so your team can just click and log in. No passwords to manage.\n\nOn the \"Status\" column for active ads: I love the intent, but pulling live ad status means integrating with the Meta or Google Ads APIs. That's a massive rabbit hole for an MVP. Instead, I strongly recommend we just add a manual \"Ads Paused\" checkbox in the dashboard. The ops team sees the bleeding SKU, goes to Facebook to pause the ad, and then checks the box in our app so everyone knows it's handled. Does that work for v1?\n\nAs for how the data gets from Shopify/Stripe into Supabase: \nSince we're forecasting for \"next week,\" we don't need second-by-second real-time updates. I recommend a **nightly sync**. We'll set up a scheduled background job (using Supabase Edge Functions) that wakes up every night at 2 AM, pulls the last 24 hours of orders and refunds from Shopify and Stripe, saves them to your database, and then asks TimeGPT to update the forecast. When your team logs in at 9 AM, the dashboard is fresh. \n\nIf you're on board with the manual ad toggle and the nightly data sync, I think we have everything we need to write the spec. \n\nWant me to draft the PRD?"
+    },
+    {
+      "role": "founder",
+      "content": "The manual checkbox for ads works for now; as long as the team can track their actions, we don't need to overcomplicate it with more APIs. The nightly sync sounds like plenty since we only look at this once a day anyway.\n\nI'm ready to see the PRD and the sprint plan. Let's make sure the sprint includes getting that data pipeline set up and the UI built out so it's actually usable."
+    },
+    {
+      "role": "maya",
+      "content": "The PRD is drafted and the sprint plan is ready. \n\nYou can review the spec on the **PRD** tab. It covers the core mechanics, the UI layout, and explicitly notes the manual ad toggle so the coding agent doesn't try to build a Meta Ads integration. \n\nOn the **Sprint** tab, you'll see I've queued up Sprint 1. It focuses entirely on scaffolding the app, setting up Google SSO, and building the dashboard UI using mock data. Sprint 2 (which is queued up next) will handle the backend cron job and the TimeGPT API integration. \n\nYour coding agent (Claude Code, Cursor, etc.) can read both the PRD and the Sprint board directly via the MCP server. You can just tell it to \"start on Sprint 1, task 1\" and it will know exactly what to do. \n\nTake a look at the PRD and let me know if anything looks off, or if you're ready to start building!"
+    }
+  ]
+}

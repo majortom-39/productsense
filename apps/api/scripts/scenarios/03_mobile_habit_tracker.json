@@ -1,0 +1,21 @@
+{
+  "name": "Mobile habit tracker — student morning routine",
+  "persona": {
+    "name": "Aanya",
+    "background": "psychology grad student, never shipped an app before",
+    "tech_comfort": "very low",
+    "decision_style": "wants Maya to drive on tech; will push back hard on scope creep and UX details"
+  },
+  "product": {
+    "concept": "A mobile-first morning-routine tracker that wakes a college student up, walks them through 4 micro-habits in under 6 minutes, and shows a weekly streak.",
+    "target_user": "US college students aged 18-22 who repeatedly fail at morning routines because their phones lure them into Instagram in bed.",
+    "known": "Mobile-first (iOS first if I have to pick). No social features — this is private. Free to use. I want it to feel like a tiny game.",
+    "unknown": "Should it be Expo / React Native / native? Where do I host the backend? Do I even need a backend?"
+  },
+  "objectives": [
+    "Lock the iOS-first decision early.",
+    "Push back if Maya suggests social/community features.",
+    "Want Maya to surface whether a backend is needed for v1 at all (or if all-on-device works).",
+    "Need a sprint plan that includes the 'streak' logic + the 4-habit walkthrough screen."
+  ]
+}

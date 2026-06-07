@@ -1,0 +1,21 @@
+{
+  "name": "Creator audio app — live podcast highlight clipper",
+  "persona": {
+    "name": "Priya",
+    "background": "ex-journalist, runs a 12k-listener interview podcast; non-technical",
+    "tech_comfort": "low",
+    "decision_style": "asks Maya for recommendations on tech, has strong opinions on the editorial side"
+  },
+  "product": {
+    "concept": "A web tool that listens to a live podcast recording and auto-flags 30-60s highlight clips the host can drop into social posts the moment the recording ends.",
+    "target_user": "Solo podcasters recording remote interviews who want to post-promote within the hour",
+    "known": "I record on Riverside/Zoom; I want highlight detection to be 'the moment was good' — not just transcription. I want to ship in 3 weeks. Budget under $30/mo for tooling.",
+    "unknown": "I don't know what to use for transcription, scoring, or hosting. I don't know if 'real-time' or 'post-recording' is the right call."
+  },
+  "objectives": [
+    "Push Maya to confirm whether real-time or batch processing is the right MVP cut.",
+    "Make sure cost stays under $30/mo for the MVP.",
+    "Get a PRD + sprint plan you can hand to a coding agent.",
+    "Don't agree to anything you don't understand — ask Maya to explain."
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "summary": {
+    "turns": 5,
+    "total_dispatches": 14,
+    "tool_counts": {
+      "invoke_aiden": 1,
+      "create_artifact": 1,
+      "log_decision": 6,
+      "invoke_hugo": 1,
+      "invoke_wes": 2,
+      "pin_artifact": 1,
+      "invoke_nora": 1,
+      "invoke_kai": 1
+    },
+    "prd_versions": 1,
+    "sprint_count": 2,
+    "task_count": 9,
+    "decision_count": 12,
+    "live_research_count": 2,
+    "agent_run_count": 6,
+    "errors": []
+  },
+  "phases": [
+    {
+      "phase": "P1 duplicate sprint",
+      "ok": true,
+      "evidence": "invoke_kai called 1 time(s); sprints=['Sprint 1: The Interactive Routine', 'Sprint 2: Retention & Polish']"
+    },
+    {
+      "phase": "P2 decisions supersession",
+      "ok": true,
+      "evidence": "log_decision called 6x, decisions=12, contradiction pairs=none"
+    },
+    {
+      "phase": "P3 PRD section_id drift",
+      "ok": false,
+      "evidence": "duplicate first-token sections per PRD version: [(1, ['what'])]"
+    },
+    {
+      "phase": "P4 multi-sprint shaping",
+      "ok": true,
+      "evidence": "2 sprint(s), 9 task(s) \u2014 OK"
+    },
+    {
+      "phase": "P5 deployment runtime surfaced",
+      "ok": false,
+      "evidence": "deploy-related signal in decisions=False, in transcript=False"
+    },
+    {
+      "phase": "P6 ack before slow tools",
+      "ok": false,
+      "evidence": "0/2 slow-dispatch turns preceded by ack text"
+    },
+    {
+      "phase": "P7 pacing (no UI sketch turn 1-2)",
+      "ok": false,
+      "evidence": "early UI sketch detected"
+    },
+    {
+      "phase": "P8 PRD draft gate",
+      "ok": true,
+      "evidence": "invoke_nora at turn indices [3]"
+    },
+    {
+      "phase": "P9 research curation",
+      "ok": true,
+      "evidence": "2 live cards, dupe titles=none"
+    },
+    {
+      "phase": "P10 dup live indicator",
+      "ok": true,
+      "evidence": "frontend-only; not exercised in this harness"
+    },
+    {
+      "phase": "P11 guardrails out of PRD",
+      "ok": true,
+      "evidence": "PRD versions with \u00a7Guardrails section: none"
+    }
+  ],
+  "quality": [
+    {
+      "dim": "PRD shape",
+      "ok": true,
+      "evidence": "v1: 7 sections, 731 words"
+    },
+    {
+      "dim": "Decisions logged",
+      "ok": true,
+      "evidence": "12 decisions"
+    },
+    {
+      "dim": "Research curated",
+      "ok": true,
+      "evidence": "2 live cards (pinned/synthesized)"
+    },
+    {
+      "dim": "Sub-agent dispatches",
+      "ok": true,
+      "evidence": "invoke_aiden=1, create_artifact=1, log_decision=6, invoke_hugo=1, invoke_wes=2, pin_artifact=1, invoke_nora=1, invoke_kai=1"
+    },
+    {
+      "dim": "Sprint shape",
+      "ok": true,
+      "evidence": "2 sprint(s), 9 task(s)"
+    }
+  ],
+  "score": 0.6363636363636364,
+  "scenario": "Mobile habit tracker \u2014 student morning routine",
+  "scenario_file": "03_mobile_habit_tracker.json",
+  "project_id": "d15b410c-ea9c-4650-b161-b0e0c964da33",
+  "transcript": [
+    {
+      "role": "maya",
+      "content": "Hey, I'm Maya. Tell me a bit about the product you're looking to build."
+    },
+    {
+      "role": "founder",
+      "content": "Hey Maya. I'm looking to build a mobile app for college students who struggle to get out of bed. It's basically a morning routine tracker that keeps them off social media by guiding them through four quick habits in under six minutes."
+    },
+    {
+      "role": "maya",
+      "content": "I pinned the competitor matrix to your Research tab. \n\nAiden's map shows a clear gap. Right now, the market is split into two extremes:\n1. **Punitive alarms** (Alarmy) that force you to do math to stop the ringing. The problem? Users solve the math, then immediately get back in bed and open TikTok.\n2. **Hard blockers** (Opal) that lock you out of social apps, but don't give you a routine to replace the scrolling.\n\nThis makes our decision on the core mechanic easy. I strongly recommend we skip building a hard app-blocker for the MVP. iOS Screen Time APIs are a nightmare to build around anyway. Instead, we just make our 6-minute flow full-screen and engaging enough that it captures their attention the second they wake up.\n\nIf we go that route \u2014 what are the 4 habits? To keep them off social media, we need to own their screen time for those 6 minutes. What exactly are they doing in the app?"
+    },
+    {
+      "role": "founder",
+      "content": "The four habits are pretty simple: drink water, make the bed, take three deep breaths, and write down one goal for the day. I want the app to feel like a tiny game they have to beat before they're allowed to go about their morning. Also, I'm thinking we should definitely focus on iOS first since that's what most of my classmates use."
+    },
+    {
+      "role": "maya",
+      "content": "Hugo just pulled some failure data on morning routine apps, and I pinned it to your Research tab. \n\nThe two biggest reasons these apps die after week one:\n1. **The Lock-Screen Hijack:** Users wake up, reflexively open TikTok, and forget your app exists until noon.\n2. **The Streak Collapse:** They get hungover, miss one day, their streak resets to zero, and they rage-quit the app entirely.\n\nI had Wes compile these into guardrails (check your Decisions tab). To fix the streak collapse, we should track *total days completed* or offer \"freeze\" days, rather than a rigid consecutive streak. \n\nFor the tech stack, I logged Expo (React Native) with local on-device storage. It means zero cloud costs, no login screen friction, and your coding agent can build it easily. \n\nHere is how I'm picturing the UI to make it feel like a \"tiny game\" and beat the lock-screen hijack:\n\n*   **The Trigger:** A persistent morning push notification that sits right on their lock screen. Tapping it bypasses the home screen and launches straight into the game.\n*   **Screen 1 (Water):** A single, full-screen card. A big, satisfying button you have to hold down for 3 seconds to \"fill\" a glass.\n*   **Screen 2 (Bed):** A full-screen card where you physically swipe up to \"pull the covers up.\"\n*   **Screen 3 (Breathe):** A clean, expanding/contracting circle animation that paces their 3 breaths.\n*   **Screen 4 (Goal):** A big, focused text input for their one daily goal.\n*   **The Win State:** Confetti, a satisfying sound, and their total score/streak updates. \n\nNo menus, no settings tabs, no dashboard to get lost in. Just one full-screen card at a time. \n\nDoes this UI shape feel right, or were you picturing a checklist they tap through?"
+    },
+    {
+      "role": "founder",
+      "content": "The one-card-at-a-time thing is exactly what I was thinking. A checklist feels too much like work, whereas the full-screen cards make it feel more like a mission they're on. \n\nI\u2019m curious about the local storage thing you mentioned\u2014does that mean we don't need a database or a server? If that makes it cheaper and easier to launch, I'm all for it. Also, let's stick to the \"freeze\" day idea for the streaks; I don't want people quitting just because they had one rough night."
+    },
+    {
+      "role": "maya",
+      "content": "Exactly. Local storage means all their data lives right on their phone. No server, no database, no cloud costs, and no login screen. They download the app and immediately start playing. It\u2019s the fastest and cheapest way to build the MVP. \n\nI just logged the local storage approach, the full-screen UI, and the \"freeze day\" streak logic to your Decisions tab so the coding agent knows exactly how to build them.\n\nWe have almost everything we need to write the spec: the target user, the core mechanic, the UI shape, and the tech stack. \n\nThere's just one last thing before I draft the PRD: **Distribution.** How are you planning to get this in front of your classmates? Are you thinking of posting it on TikTok, dropping it in campus Discord servers, or just word of mouth? Knowing this helps us figure out if we need to build a shareable \"win screen\" they can post to their stories."
+    },
+    {
+      "role": "founder",
+      "content": "The \"win screen\" sounds good, but let's keep it simple\u2014just a graphic they can save or share. I definitely don't want a \"feed\" or any social networking inside the app itself; it needs to stay private so they don't get distracted. \n\nI'm planning to just text the link to some group chats and maybe post a video of me using it on my own TikTok. Since we're set on iOS and local storage, do you have enough to put the plan together? I'd love to see how we're going to build the streak logic and that 4-habit flow."
+    },
+    {
+      "role": "maya",
+      "content": "Perfect. I just logged the privacy constraint\u2014no feed, just the shareable graphic\u2014so the coding agent doesn't try to build a social network by accident.\n\nI also had Nora draft the full PRD. It's ready for you on the **PRD tab**. \n\nIt covers the target user, the 4-habit flow, the \"freeze day\" streak logic, and the local-storage tech stack. Take a read through. If it looks good, I can generate the sprint board so your coding agent can start building. Let me know if you want to tweak anything first!"
+    },
+    {
+      "role": "founder",
+      "content": "The PRD looks solid\u2014I'm really glad we're keeping it simple and avoiding all the social feed clutter. As long as the \"freeze day\" logic is clear so people don't get discouraged, I think we're ready. Let\u2019s go ahead and generate that sprint board so I can see the plan for the streak logic and the habit screens."
+    },
+    {
+      "role": "maya",
+      "content": "I just generated the sprint board\u2014you can check it out on the **Sprint tab**. \n\nIt breaks the build down into manageable chunks: Sprint 1 covers scaffolding the local storage and building the full-screen 4-habit flow (the hold-to-fill water, swipe-to-make-bed, paced breathing, and goal input). Sprint 2 queues up the \"freeze day\" streak logic, lock-screen notifications, and the shareable graphic.\n\nI also locked in the guardrails around the streak collapse and social features so your coding agent doesn't hallucinate a rigid streak system or a social feed. \n\nYou're ready to build. You can point your coding agent (Cursor, Claude Code, etc.) at the MCP server, and it will read the PRD, the decisions, and the sprint board directly to pick up the first task."
+    }
+  ]
+}

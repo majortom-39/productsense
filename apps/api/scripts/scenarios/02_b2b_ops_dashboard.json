@@ -1,0 +1,21 @@
+{
+  "name": "B2B ops dashboard — Shopify refund forecaster",
+  "persona": {
+    "name": "Marcus",
+    "background": "ops lead at a 30-person DTC apparel brand; comfortable with spreadsheets, not with code",
+    "tech_comfort": "medium-low",
+    "decision_style": "decisive on scope, asks Maya for the technical defaults"
+  },
+  "product": {
+    "concept": "An internal web dashboard that connects to our Shopify + Stripe, predicts the dollar value of refunds we'll process next week, and flags the top-5 SKUs driving them.",
+    "target_user": "Our ops team (3 people) — they live in this dashboard every Monday morning. Not customers.",
+    "known": "Internal-only, 3 users, no auth complexity (we use Google SSO for everything). Shopify + Stripe data, ~50k orders/year. Want it on a $0-50/mo budget.",
+    "unknown": "Don't know where to host, what DB to use, how to do the forecasting. I trust your recommendation."
+  },
+  "objectives": [
+    "Get the data pipeline shape right (Shopify → DB → dashboard).",
+    "Lock the auth approach (Google SSO).",
+    "Push Maya to call out whether a hosted forecasting service or a Python script is better.",
+    "Make sure the sprint has tasks for both the data ingest AND the UI."
+  ]
+}

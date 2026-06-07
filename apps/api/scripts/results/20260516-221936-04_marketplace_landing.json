@@ -1,0 +1,147 @@
+{
+  "summary": {
+    "turns": 4,
+    "total_dispatches": 10,
+    "tool_counts": {
+      "invoke_iris": 1,
+      "pin_artifact": 2,
+      "log_decision": 4,
+      "invoke_hugo": 1,
+      "invoke_wes": 1,
+      "invoke_nora": 1
+    },
+    "prd_versions": 1,
+    "sprint_count": 0,
+    "task_count": 0,
+    "decision_count": 8,
+    "live_research_count": 2,
+    "agent_run_count": 4,
+    "errors": []
+  },
+  "phases": [
+    {
+      "phase": "P1 duplicate sprint",
+      "ok": true,
+      "evidence": "invoke_kai called 0 time(s); sprints=[]"
+    },
+    {
+      "phase": "P2 decisions supersession",
+      "ok": true,
+      "evidence": "log_decision called 4x, decisions=8, contradiction pairs=none"
+    },
+    {
+      "phase": "P3 PRD section_id drift",
+      "ok": false,
+      "evidence": "duplicate first-token sections per PRD version: [(1, ['what'])]"
+    },
+    {
+      "phase": "P4 multi-sprint shaping",
+      "ok": true,
+      "evidence": "0 sprint(s), 0 task(s) \u2014 OK"
+    },
+    {
+      "phase": "P5 deployment runtime surfaced",
+      "ok": true,
+      "evidence": "deploy-related signal in decisions=True, in transcript=False"
+    },
+    {
+      "phase": "P6 ack before slow tools",
+      "ok": false,
+      "evidence": "0/2 slow-dispatch turns preceded by ack text"
+    },
+    {
+      "phase": "P7 pacing (no UI sketch turn 1-2)",
+      "ok": true,
+      "evidence": "no early sketch"
+    },
+    {
+      "phase": "P8 PRD draft gate",
+      "ok": true,
+      "evidence": "invoke_nora at turn indices [3]"
+    },
+    {
+      "phase": "P9 research curation",
+      "ok": true,
+      "evidence": "2 live cards, dupe titles=none"
+    },
+    {
+      "phase": "P10 dup live indicator",
+      "ok": true,
+      "evidence": "frontend-only; not exercised in this harness"
+    },
+    {
+      "phase": "P11 guardrails out of PRD",
+      "ok": true,
+      "evidence": "PRD versions with \u00a7Guardrails section: none"
+    }
+  ],
+  "quality": [
+    {
+      "dim": "PRD shape",
+      "ok": true,
+      "evidence": "v1: 7 sections, 529 words"
+    },
+    {
+      "dim": "Decisions logged",
+      "ok": true,
+      "evidence": "8 decisions"
+    },
+    {
+      "dim": "Research curated",
+      "ok": true,
+      "evidence": "2 live cards (pinned/synthesized)"
+    },
+    {
+      "dim": "Sub-agent dispatches",
+      "ok": true,
+      "evidence": "invoke_iris=1, pin_artifact=2, log_decision=4, invoke_hugo=1, invoke_wes=1, invoke_nora=1"
+    },
+    {
+      "dim": "Sprint shape",
+      "ok": false,
+      "evidence": "0 sprint(s), 0 task(s)"
+    }
+  ],
+  "score": 0.8181818181818182,
+  "scenario": "Two-sided marketplace landing \u2014 local board game cafe finder",
+  "scenario_file": "04_marketplace_landing.json",
+  "project_id": "4430c275-356f-4259-9bbd-ed5c89a29c7b",
+  "transcript": [
+    {
+      "role": "maya",
+      "content": "Hey, I'm Maya. Tell me a bit about the product you're looking to build."
+    },
+    {
+      "role": "founder",
+      "content": "Hey Maya. I'm looking to build a simple landing page and waitlist for a new concept. It's basically a way to match local board game cafes with D&D or gaming groups that need a guaranteed table for their Friday night sessions.\n\nI want to start small in just five US cities to see if organizers actually want this. [DONE] (Wait, not done yet, just starting!)"
+    },
+    {
+      "role": "maya",
+      "content": "Iris found some interesting nuance. The pain is very real, but it's concentrated in two specific groups: people organizing games with strangers (who want a safe, neutral space), and urban players whose apartments are simply too small. \n\nI've pinned those two personas to your Research tab and logged them as our MVP audience.\n\nHere's the catch: players actually *dislike* regular cafes because of \"squatter guilt\"\u2014sitting there for 4 hours feels awkward. They also complain that Local Game Stores are too loud for roleplay. \n\nIf we're partnering with board game cafes, our landing page needs to explicitly sell **\"guilt-free, guaranteed 4-hour blocks\"** as the core value. \n\nBefore we sketch out the page, tell me about the supply side. Are you planning to have these cafes offer private rooms, or just reserve tables on the main floor? (If it's the main floor, we'll need to figure out how to position it so players don't worry about the noise)."
+    },
+    {
+      "role": "founder",
+      "content": "That's a great insight about the squatter guilt; I hadn't thought about it that way, but it's spot on. Most of these cafes have a mix of semi-private booths and main floor tables, but I want to focus on the \"guaranteed\" aspect regardless of where they sit.\n\nI'm keeping it simple for now, so I'm not sure if we should have a separate section for cafes yet or just one page for everyone. What do you think is better for a quick test? Also, I really want to figure out how we're actually going to get people to the site\u2014I'm thinking specific subreddits or Discord groups."
+    },
+    {
+      "role": "maya",
+      "content": "Hugo just came back with some brutal but necessary reality checks. I've pinned them to your Research tab and had Wes lock them in as guardrails.\n\nHere is the biggest collision with your plan: you mentioned targeting **Friday nights**. The primary reason these platforms die is that cafes *hate* giving up a 6-seater table for 4 hours on a Friday. D&D players tend to buy one coffee and camp, while casual gamers turn over every 90 minutes and buy more food. The cafes end up losing money and pull their tables off the app. \n\nWe have two ways around this for the MVP:\n\n1. **The Premium Route:** We stick to Friday nights, but explicitly sell this as a paid reservation (e.g., a $20 non-refundable deposit or a strict food/drink minimum). The cafe makes guaranteed money, and the deposit prevents players from flaking.\n2. **The Off-Peak Route:** We pivot the pitch to Mon\u2013Thurs nights, when cafes are desperate to fill empty seats and won't care if you sit there for 4 hours.\n\nWhich way do you want to lean for the landing page pitch?"
+    },
+    {
+      "role": "founder",
+      "content": "I think the Premium Route is the way to go for the Friday night focus. A deposit or minimum spend solves the cafe's \"squatter\" problem and ensures the group is serious.\n\nBut let's not get ahead of ourselves with the tech\u2014I don't want to build a payment system or a complex portal yet. Can we just explain the \"Premium Friday\" concept on the landing page and see if organizers are willing to join a waitlist for it? Also, we need to make sure we're targeting the right spots, like specific city subreddits, to actually get eyes on this."
+    },
+    {
+      "role": "maya",
+      "content": "Smart call. A $20 table deposit validates intent perfectly. I've logged that we are cutting the actual booking and payment engine from the MVP\u2014this is strictly a landing page to test if organizers will actually hand over their email for this pitch.\n\nTo answer your earlier question: keep it to **one page**. Since you're distributing this in local LFG (Looking For Group) Discords and city subreddits (like r/NYCmeetups), the page needs to speak 100% to the player. Don't dilute it with a \"For Cafes\" section. We can manually pitch cafes once we have 500 players on the waitlist.\n\nHere is how I'm picturing the page layout. Let me know if this sounds right:\n\n*   **Hero:** \"Guaranteed, guilt-free tables for your Friday night campaign.\"\n*   **Sub-hero:** \"Book a 4-hour block at a premium local board game cafe. No squatter guilt, no fighting for space. $20 deposit goes toward your group's food and drinks.\"\n*   **The Action:** A dropdown to select one of the 5 cities, an email input, and a \"Join the Waitlist\" button.\n*   **Below the fold:** A simple 3-step \"How it works\" (1. Pick a spot, 2. Lock it in with a deposit, 3. Play for 4 hours uninterrupted).\n\nIf this shape looks good, we have almost everything we need to draft the PRD. Just one last question: do you have a preferred tech stack for this (like React/Vite + Supabase for the waitlist database), or should I just pick a fast, free default for your coding agent to use?"
+    },
+    {
+      "role": "founder",
+      "content": "I'm not sure about React or Supabase, that sounds a bit over my head. What do you recommend that stays under my $20 a month budget and is fast to set up?\n\nThe layout sounds perfect, but let's make sure the \"How it works\" section mentions that the deposit happens later so they don't expect a checkout flow right now. If we can get this live in under a week, I'm happy to move to the PRD."
+    },
+    {
+      "role": "maya",
+      "content": "Got it. I'll make sure the \"How it works\" section explicitly says \"No payment today\u2014we'll email you when your city opens.\" That keeps expectations clear.\n\nSince you're using a coding agent, you don't need to worry about setting up React or Supabase yourself. I recommend **Vite + React + Tailwind** for the page, and **Supabase** to store the waitlist emails. The agent can scaffold this in minutes, and both have generous free tiers, so your monthly cost will be exactly $0. I've logged this as our tech stack.\n\nI just drafted the PRD\u2014take a look at the **PRD tab** on the right. Give it a read. If the scope and the pitch look right, let me know and I'll generate the sprint board so your coding agent can start building."
+    }
+  ]
+}

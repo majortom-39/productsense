@@ -1,0 +1,22 @@
+{
+  "label": "AFTER-flash",
+  "r1": {
+    "prompt_tokens": 21045,
+    "completion_tokens": 40,
+    "cached_tokens": 0,
+    "thoughts_tokens": 980,
+    "cost": 0.0021205,
+    "latency_s": 7.8508930999996664,
+    "model": "gemini-3.5-flash"
+  },
+  "r2": {
+    "prompt_tokens": 21045,
+    "completion_tokens": 38,
+    "cached_tokens": 20443,
+    "thoughts_tokens": 982,
+    "cost": 0.0005864750000000001,
+    "latency_s": 6.3743672000018705,
+    "model": "gemini-3.5-flash"
+  },
+  "avg_cost": 0.0013534875000000002
+}

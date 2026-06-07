@@ -1,0 +1,21 @@
+{
+  "name": "Developer-facing devtool — PR description generator from diffs",
+  "persona": {
+    "name": "Sam",
+    "background": "staff engineer at a 200-person fintech, building a side project; technically fluent",
+    "tech_comfort": "high",
+    "decision_style": "has strong tech opinions, expects Maya to push back when he's wrong; pivots quickly"
+  },
+  "product": {
+    "concept": "A GitHub App that reads the diff of a freshly opened PR and writes a high-quality, project-style-matched PR description into the body — pulling tone from the repo's last 20 merged PRs.",
+    "target_user": "Engineers at 10-500 person tech companies who hate writing PR descriptions and let AI assistants get them 60% there.",
+    "known": "GitHub App (not a CLI). LLM call per PR. Tone-matching from prior merged PRs in the same repo. I want Claude Sonnet for the writing — non-negotiable.",
+    "unknown": "I don't know if the GitHub App webhook can return fast enough — does the LLM call need to be queued and the description written back async? Hosting: Vercel vs Fly vs my own droplet?"
+  },
+  "objectives": [
+    "Pin Claude Sonnet as the LLM (founder's strong opinion, log as decision).",
+    "Push Maya to surface the webhook timeout (10s GitHub cap) and propose async write-back.",
+    "Push Maya to compare Vercel/Fly/Render given long-ish LLM calls.",
+    "Pivot mid-conversation: also ask Maya if a simple CLI would be a faster MVP than the GitHub App — see how she handles a late scope change."
+  ]
+}

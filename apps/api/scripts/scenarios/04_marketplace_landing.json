@@ -1,0 +1,21 @@
+{
+  "name": "Two-sided marketplace landing — local board game cafe finder",
+  "persona": {
+    "name": "Ravi",
+    "background": "former event planner pivoting into community tech; comfortable with Notion and Webflow",
+    "tech_comfort": "medium",
+    "decision_style": "wants to validate before building; will resist over-scoping"
+  },
+  "product": {
+    "concept": "A landing page + waitlist for a marketplace that matches local board-game cafes with hobby groups looking to book a table for a Friday-night campaign session.",
+    "target_user": "Hobby D&D / board game group organisers in 5 mid-sized US cities. The cafe is the supply side; the organiser is the demand side.",
+    "known": "MVP is JUST the landing page + waitlist + a typeform-style intake. Don't build the matching engine yet. I want to validate demand first. Budget tiny — under $20/mo.",
+    "unknown": "Where to host, what to use for the form, should the cafes be on a separate page or one combined page."
+  },
+  "objectives": [
+    "Hold the line: MVP is landing + waitlist, NOT the marketplace.",
+    "Push Maya to call out the marketing channel (Reddit subreddits, etc.) up front.",
+    "Get a sprint that ships in under a week.",
+    "Refuse if Maya tries to scope in messaging or payments."
+  ]
+}

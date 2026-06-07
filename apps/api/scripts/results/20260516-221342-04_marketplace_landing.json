@@ -1,0 +1,157 @@
+{
+  "summary": {
+    "turns": 5,
+    "total_dispatches": 12,
+    "tool_counts": {
+      "invoke_iris": 1,
+      "pin_artifact": 1,
+      "log_decision": 10
+    },
+    "prd_versions": 0,
+    "sprint_count": 0,
+    "task_count": 0,
+    "decision_count": 0,
+    "live_research_count": 1,
+    "agent_run_count": 1,
+    "errors": [
+      "{'message': \"Could not find the 'supersedes' column of 'decisions' in the schema cache\", 'code': 'PGRST204', 'hint': None, 'details': None}",
+      "{'message': \"Could not find the 'supersedes' column of 'decisions' in the schema cache\", 'code': 'PGRST204', 'hint': None, 'details': None}",
+      "{'message': \"Could not find the 'supersedes' column of 'decisions' in the schema cache\", 'code': 'PGRST204', 'hint': None, 'details': None}",
+      "{'message': \"Could not find the 'supersedes' column of 'decisions' in the schema cache\", 'code': 'PGRST204', 'hint': None, 'details': None}"
+    ]
+  },
+  "phases": [
+    {
+      "phase": "P1 duplicate sprint",
+      "ok": true,
+      "evidence": "invoke_kai called 0 time(s); sprints=[]"
+    },
+    {
+      "phase": "P2 decisions supersession",
+      "ok": true,
+      "evidence": "log_decision called 10x, decisions=0, contradiction pairs=none"
+    },
+    {
+      "phase": "P3 PRD section_id drift",
+      "ok": true,
+      "evidence": "duplicate first-token sections per PRD version: none"
+    },
+    {
+      "phase": "P4 multi-sprint shaping",
+      "ok": true,
+      "evidence": "0 sprint(s), 0 task(s) \u2014 OK"
+    },
+    {
+      "phase": "P5 deployment runtime surfaced",
+      "ok": true,
+      "evidence": "deploy-related signal in decisions=False, in transcript=True"
+    },
+    {
+      "phase": "P6 ack before slow tools",
+      "ok": false,
+      "evidence": "0/1 slow-dispatch turns preceded by ack text"
+    },
+    {
+      "phase": "P7 pacing (no UI sketch turn 1-2)",
+      "ok": true,
+      "evidence": "no early sketch"
+    },
+    {
+      "phase": "P8 PRD draft gate",
+      "ok": true,
+      "evidence": "invoke_nora at turn indices []"
+    },
+    {
+      "phase": "P9 research curation",
+      "ok": true,
+      "evidence": "1 live cards, dupe titles=none"
+    },
+    {
+      "phase": "P10 dup live indicator",
+      "ok": true,
+      "evidence": "frontend-only; not exercised in this harness"
+    },
+    {
+      "phase": "P11 guardrails out of PRD",
+      "ok": true,
+      "evidence": "PRD versions with \u00a7Guardrails section: none"
+    }
+  ],
+  "quality": [
+    {
+      "dim": "PRD shape",
+      "ok": false,
+      "evidence": "no PRD drafted"
+    },
+    {
+      "dim": "Decisions logged",
+      "ok": false,
+      "evidence": "0 decisions"
+    },
+    {
+      "dim": "Research curated",
+      "ok": true,
+      "evidence": "1 live cards (pinned/synthesized)"
+    },
+    {
+      "dim": "Sub-agent dispatches",
+      "ok": true,
+      "evidence": "invoke_iris=1, pin_artifact=1, log_decision=10"
+    },
+    {
+      "dim": "Sprint shape",
+      "ok": false,
+      "evidence": "0 sprint(s), 0 task(s)"
+    }
+  ],
+  "score": 0.9090909090909091,
+  "scenario": "Two-sided marketplace landing \u2014 local board game cafe finder",
+  "scenario_file": "04_marketplace_landing.json",
+  "project_id": "206f486e-9747-43b3-aea5-e78e606aa61b",
+  "transcript": [
+    {
+      "role": "maya",
+      "content": "Hey, I'm Maya. Tell me a bit about the product you're looking to build."
+    },
+    {
+      "role": "founder",
+      "content": "Hey Maya. I'm looking to build a simple landing page for a new concept I have. It's basically a way to match local board game cafes with D&D or hobby groups who need a guaranteed table for their Friday night sessions."
+    },
+    {
+      "role": "maya",
+      "content": "Looks like my worry was spot on. I pinned the breakdown to your Research tab, but the short version is: board game cafes actively avoid hosting D&D groups on Friday nights. \n\nThe math just doesn't work for them. A casual group turns over 2-3 times a night and buys food; a D&D group camps at the biggest table for 5 hours and nurses a single drink. \n\nIf we pitch this to cafes as a \"Friday night\" solution, they won't sign up. But we can pivot the landing page in one of two ways to make it a win-win:\n\n1. **The \"Slow Night\" Filler:** We shift the focus to Monday\u2013Wednesday. We pitch cafes on filling empty seats on dead nights, and pitch players on a guaranteed, quiet space.\n2. **The Premium Booking:** We keep it Friday night, but the product is explicitly a premium reservation. Groups pre-pay a high table fee or minimum spend upfront to make it worth the cafe's while. \n\nWhich angle do you want to test with this landing page?"
+    },
+    {
+      "role": "founder",
+      "content": "That's a fair point about the math, I hadn't looked at it that way. Let's go with the \"Premium Booking\" angle for Fridays\u2014I think these groups are willing to pay for the certainty of a spot. \n\nHow do we actually get this in front of people to see if they'll bite, and what's the plan to get this live by next week? I want to keep this super lean, just a landing page and a form for now."
+    },
+    {
+      "role": "maya",
+      "content": ""
+    },
+    {
+      "role": "founder",
+      "content": "That makes sense. I'm thinking we can seed the link in local city subreddits and some D&D Discord servers to see if organizers actually click through.\n\nHow are we going to build this so it's live in a few days? I want to keep the tech stack simple and the costs under $20 a month if possible."
+    },
+    {
+      "role": "maya",
+      "content": ""
+    },
+    {
+      "role": "founder",
+      "content": "I'm thinking Webflow or maybe Framer since I've used those before, but I'm not sure what's best for staying under that $20 budget. What do you recommend for the landing page and the form?\n\nAlso, should we have a separate section for the cafes on the same page, or just focus entirely on the organizers for this first test?"
+    },
+    {
+      "role": "maya",
+      "content": ""
+    },
+    {
+      "role": "founder",
+      "content": "I'd say let's keep it all on one page for now\u2014maybe just a simple \"Are you a venue owner?\" link in the footer that goes to a separate section. If we're using Carrd and Tally, how quickly can we get this live? I really want to be sharing this link in the subreddits by Tuesday."
+    },
+    {
+      "role": "maya",
+      "content": ""
+    }
+  ]
+}

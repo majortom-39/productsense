@@ -1,0 +1,15 @@
+{
+  "name": "@productsense/shared-types",
+  "version": "0.0.1",
+  "private": true,
+  "description": "TypeScript types shared between web and mcp clients",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

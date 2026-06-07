@@ -1,0 +1,145 @@
+{
+  "summary": {
+    "turns": 4,
+    "total_dispatches": 7,
+    "tool_counts": {
+      "invoke_iris": 1,
+      "pin_artifact": 1,
+      "log_decision": 4,
+      "invoke_nora": 1
+    },
+    "prd_versions": 1,
+    "sprint_count": 0,
+    "task_count": 0,
+    "decision_count": 4,
+    "live_research_count": 1,
+    "agent_run_count": 2,
+    "errors": []
+  },
+  "phases": [
+    {
+      "phase": "P1 duplicate sprint",
+      "ok": true,
+      "evidence": "invoke_kai called 0 time(s); sprints=[]"
+    },
+    {
+      "phase": "P2 decisions supersession",
+      "ok": true,
+      "evidence": "log_decision called 4x, decisions=4, contradiction pairs=none"
+    },
+    {
+      "phase": "P3 PRD section_id drift",
+      "ok": false,
+      "evidence": "duplicate first-token sections per PRD version: [(1, ['what'])]"
+    },
+    {
+      "phase": "P4 multi-sprint shaping",
+      "ok": true,
+      "evidence": "0 sprint(s), 0 task(s) \u2014 OK"
+    },
+    {
+      "phase": "P5 deployment runtime surfaced",
+      "ok": true,
+      "evidence": "deploy-related signal in decisions=True, in transcript=True"
+    },
+    {
+      "phase": "P6 ack before slow tools",
+      "ok": false,
+      "evidence": "0/1 slow-dispatch turns preceded by ack text"
+    },
+    {
+      "phase": "P7 pacing (no UI sketch turn 1-2)",
+      "ok": false,
+      "evidence": "early UI sketch detected"
+    },
+    {
+      "phase": "P8 PRD draft gate",
+      "ok": true,
+      "evidence": "invoke_nora at turn indices [3]"
+    },
+    {
+      "phase": "P9 research curation",
+      "ok": true,
+      "evidence": "1 live cards, dupe titles=none"
+    },
+    {
+      "phase": "P10 dup live indicator",
+      "ok": true,
+      "evidence": "frontend-only; not exercised in this harness"
+    },
+    {
+      "phase": "P11 guardrails out of PRD",
+      "ok": true,
+      "evidence": "PRD versions with \u00a7Guardrails section: none"
+    }
+  ],
+  "quality": [
+    {
+      "dim": "PRD shape",
+      "ok": true,
+      "evidence": "v1: 7 sections, 532 words"
+    },
+    {
+      "dim": "Decisions logged",
+      "ok": true,
+      "evidence": "4 decisions"
+    },
+    {
+      "dim": "Research curated",
+      "ok": true,
+      "evidence": "1 live cards (pinned/synthesized)"
+    },
+    {
+      "dim": "Sub-agent dispatches",
+      "ok": true,
+      "evidence": "invoke_iris=1, pin_artifact=1, log_decision=4, invoke_nora=1"
+    },
+    {
+      "dim": "Sprint shape",
+      "ok": false,
+      "evidence": "0 sprint(s), 0 task(s)"
+    }
+  ],
+  "score": 0.7272727272727273,
+  "scenario": "Two-sided marketplace landing \u2014 local board game cafe finder",
+  "scenario_file": "04_marketplace_landing.json",
+  "project_id": "c781685e-1956-4a98-8136-e5ce7fe34c63",
+  "transcript": [
+    {
+      "role": "maya",
+      "content": "Hey, I'm Maya. Tell me a bit about the product you're looking to build."
+    },
+    {
+      "role": "founder",
+      "content": "Hey Maya. I'm looking to build a simple site to help D&D and board game groups find space in local cafes on Friday nights. Right now, I just want a landing page with a waitlist to see if organizers actually want this."
+    },
+    {
+      "role": "maya",
+      "content": "I pinned Iris's findings to the Research tab. \n\nThe pain is absolutely real, but the core issue isn't just *finding* a place\u2014it's the anxiety of \"table camping.\" Organizers feel like jerks taking up a table for 4 hours on a Friday night. They avoid Local Game Stores because of the vibe (crowded, intimidating), but cafes feel like a social minefield where they might get kicked out mid-combat.\n\nThis gives us a killer angle for the landing page. Instead of just \"Find a cafe,\" the pitch should be: **\"Guaranteed, guilt-free tables for your 4-hour campaign. The cafe knows you're coming and actually wants you there.\"**\n\nDoes that angle feel right? And if so, how are you thinking about the model\u2014would groups pay a flat $15-$20 table fee to book, or are you thinking it's free to book as long as they commit to a food/drink minimum?"
+    },
+    {
+      "role": "founder",
+      "content": "That angle is spot on. The \"guilt\" of taking up space for four hours is exactly why people hesitate to play in public, so we should definitely lean into that.\n\nAs for the model, I'm leaning toward a food and drink minimum rather than a booking fee, but honestly, I don't want to overcomplicate the site with payments yet. How do we get this live and in front of people on Reddit to see if they'll even sign up?"
+    },
+    {
+      "role": "maya",
+      "content": "Great call keeping payments out of it for now. I just logged that as a firm scope cut\u2014no booking engine, no Stripe integration, just a pure waitlist.\n\nTo get this live fast and for free, here is what I'm picturing for the page:\n\n**The Layout:**\n*   **Hero:** \"Guaranteed, guilt-free tables for your 4-hour campaign.\"\n*   **Subtext:** \"Book local cafes that actually want your D&D group there. No table-camping anxiety, just a simple food/drink minimum.\"\n*   **Action:** A single email input box and a \"Join the Waitlist\" button.\n*   **Below the fold:** A simple 3-step \"How it works\" (1. Find a cafe, 2. Commit to a tab, 3. Roll initiative). \n\n**The Tech Stack (100% Free Tier):**\n*   **Frontend:** React (Vite) + Tailwind CSS.\n*   **Database:** Supabase (just one simple table to catch the emails).\n*   **Hosting:** Vercel or Netlify. \n\n**The Reddit Strategy:**\nReddit hates self-promotion, so you can't just drop a link. The play is to post in r/DnD and local city subreddits (e.g., r/London or r/Austin) asking a question: *\"I always feel like a jerk taking up a cafe table for 4 hours to play D&D. I'm building a free directory of cafes that actually want us there if we hit a food minimum. Would you use this?\"* Put the link in the comments if people ask.\n\nDoes that page layout and tech stack work for you? If so, we actually have everything we need to write the PRD and get your coding agent to build it today. Want me to draft it?"
+    },
+    {
+      "role": "founder",
+      "content": "The layout looks solid, but the tech stack sounds a bit overkill for a simple landing page. Since I'm comfortable with Notion and Webflow, is there a reason we aren't just using something like Carrd or even a simple form?\n\nAlso, you mentioned a \"directory\" in the Reddit strategy\u2014should the landing page actually show the list of cafes I've talked to, or is it just the waitlist for now? I want to make sure I'm not over-promising if I don't have 20 cafes signed up yet."
+    },
+    {
+      "role": "maya",
+      "content": "You are 100% right on the tech stack. I over-engineered that. \n\nIf you want to use Carrd or Webflow, you absolutely should\u2014you wouldn't even need a coding agent for this step. But if you *do* want to use your coding agent to lay the foundation for the actual app later, we can ditch the database entirely. The agent can build a simple HTML/Tailwind page and wire the email box to Formspree or Netlify Forms. Zero backend required, and you own the code. Which route do you prefer?\n\nGood catch on the \"directory\" wording, too. Do not over-promise. The page should not show a list of cafes yet. \n\nInstead, frame it as an exclusive unlock. The landing page copy becomes: *\"We're partnering with our first cafes in [Your City]. Drop your email to get the list when we launch.\"* If you already have one or two cafes on board, you can use them as a teaser (\"Already talking to The Roasted Bean...\"). \n\nOn Reddit, you just tweak the pitch to: *\"I'm starting to put together a list of cafes...\"* instead of *\"I built a directory.\"*\n\nIf we go the coding agent route (HTML + Formspree), are you ready for me to draft the PRD so the agent can build the page?"
+    },
+    {
+      "role": "founder",
+      "content": "I'd prefer to go the coding agent route with HTML and a simple form service like you suggested\u2014that way I have the code if I want to expand it later. \n\nAs for the \"directory\" part, I think mentioning 1 or 2 specific cities is better than a generic list so people feel it's actually happening near them. \n\nLet's do it\u2014can you draft the PRD and a plan to get this live in under a week?"
+    },
+    {
+      "role": "maya",
+      "content": "I just logged those decisions (HTML/Formspree stack, waitlist-only scope) and had Nora draft the PRD. \n\nTake a look at the **PRD tab** on the right. It covers the exact pitch, the target user, the scope cuts, and the tech stack we just aligned on. \n\nIf that looks good to you, the next step is to generate the sprint board so your coding agent has the exact tasks to build this page. Ready for me to plan the sprint?"
+    }
+  ]
+}
