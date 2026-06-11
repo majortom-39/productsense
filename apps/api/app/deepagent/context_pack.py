@@ -1,8 +1,8 @@
 """The specialist briefing engine — "anchor + auto-trail".
 
 A specialist is stateless: the only thing that reaches it is the task
-description Maya writes. So when she delegates a synthesis job (Nora's PRD,
-Kai's sprint, Wes's guardrails), we assemble a read-only **context pack** she can
+description Maya writes. So when she delegates a synthesis job (Nora's PRD or
+Kai's sprint), we assemble a read-only **context pack** she can
 paste into that description.
 
 How it works: Maya names the **anchor** cards a job is about. We follow the

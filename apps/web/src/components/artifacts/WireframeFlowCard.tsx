@@ -10,6 +10,7 @@
 import { ArrowRight, Link2, Smartphone, Globe, Puzzle, Monitor } from "lucide-react";
 import type { WireframeDevice, WireframeFlowPayload, WireframeScreen } from "./types";
 import { wireframeDocument } from "./wireframe-template";
+import { WireframeScreenRender } from "./WireframeScreenRender";
 
 // Inner content dimensions per device (the iframe viewport).
 const DEVICE_DIMS: Record<WireframeDevice, { w: number; h: number }> = {
@@ -106,13 +107,22 @@ function ScreenColumn({
   return (
     <figure className="flex flex-col gap-2.5" style={{ width: device === "phone" ? w + 16 : w }}>
       <DeviceFrame device={device}>
-        <iframe
-          // Sandbox with NO allow-scripts → model HTML can't execute JS.
-          sandbox=""
-          title={screen.name}
-          srcDoc={wireframeDocument(screen.html, device)}
-          style={{ width: device === "phone" ? w : "100%", height: h, border: "none", display: "block" }}
-        />
+        {screen.blocks && screen.blocks.length > 0 ? (
+          // Preferred path: deterministic block renderer (no model HTML, no iframe).
+          <div
+            style={{ width: device === "phone" ? w : "100%", height: h, overflow: "hidden", display: "block" }}
+          >
+            <WireframeScreenRender screen={screen} device={device} />
+          </div>
+        ) : (
+          // Legacy fallback: model-authored HTML in a no-scripts sandboxed iframe.
+          <iframe
+            sandbox=""
+            title={screen.name}
+            srcDoc={wireframeDocument(screen.html ?? "", device)}
+            style={{ width: device === "phone" ? w : "100%", height: h, border: "none", display: "block" }}
+          />
+        )}
       </DeviceFrame>
 
       <figcaption className="px-0.5">

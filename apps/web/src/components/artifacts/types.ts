@@ -100,14 +100,58 @@ export type WireframeFlowType =
   | "auth"
   | "other";
 
+/** ── Screen body blocks (the component DSL) ───────────────────────────────
+ *  Maya composes a screen from these typed blocks instead of authoring HTML.
+ *  The renderer owns ALL layout, spacing, and typography, so every screen is
+ *  consistent + mid-fidelity regardless of how the model fills the content.
+ *  A curated, deliberately small library — add to it intentionally, not ad hoc. */
+export type WireframeBlock =
+  | { type: "heading"; text: string; level?: 1 | 2 | 3 }
+  | { type: "text"; text: string; tone?: "default" | "muted" }
+  | { type: "input"; label?: string; placeholder?: string; kind?: "text" | "password" | "search" | "textarea" }
+  | { type: "button"; label: string; variant?: "primary" | "secondary"; fullWidth?: boolean }
+  | { type: "buttonGroup"; layout?: "row" | "stack"; buttons: { label: string; variant?: "primary" | "secondary" }[] }
+  | { type: "list"; items: { title: string; subtitle?: string; leading?: "avatar" | "icon" | "thumb"; trailing?: string }[] }
+  | { type: "card"; title?: string; body?: string; chips?: string[] }
+  | { type: "image"; label?: string; ratio?: "square" | "wide" | "tall" }
+  | { type: "media"; variant?: "image" | "audio" | "video" | "map"; label?: string }
+  | { type: "chips"; items: string[] }
+  | { type: "metricRow"; metrics: { value: string; label?: string }[] }
+  | { type: "field"; label: string; value?: string }
+  | { type: "toggleRow"; label: string; on?: boolean }
+  | { type: "segmented"; options: string[]; active?: number }
+  | { type: "hero"; kicker?: string; title: string; subtitle?: string; media?: boolean }
+  | { type: "divider" }
+  | { type: "spacer"; size?: "sm" | "md" | "lg" };
+
+export type WireframeBlockType = WireframeBlock["type"];
+
+/** The top app bar (title + leading/trailing affordances). Rendered by code. */
+export interface WireframeAppBar {
+  title?: string;
+  leading?: "back" | "menu" | "none";
+  /** Short labels for trailing affordances (e.g. "Save", "⋯", "Filter"). */
+  trailing?: string[];
+}
+
+/** The pinned bottom region — either tab navigation or a primary action bar. */
+export type WireframeBottomBar =
+  | { kind: "nav"; items: { label: string; active?: boolean }[] }
+  | { kind: "actions"; buttons: { label: string; variant?: "primary" | "secondary" }[] };
+
 export interface WireframeScreen {
   /** Short name for the screen (e.g. "Welcome", "Today's meals"). Used as the
    *  label above the frame + referenced by transitions. */
   name: string;
-  /** Structural HTML for the inside of the screen. NO <html>/<body> tags — the
-   *  renderer wraps it in a greyscale document scaffold and shows it in a
-   *  no-scripts sandboxed iframe. */
-  html: string;
+  /** The screen body as typed blocks — the preferred path (deterministic render). */
+  blocks?: WireframeBlock[];
+  /** Optional top app bar. */
+  appBar?: WireframeAppBar;
+  /** Optional pinned bottom bar (tab nav or action buttons). */
+  bottomBar?: WireframeBottomBar;
+  /** @deprecated Legacy structural HTML path. Still rendered (in a sandboxed
+   *  iframe) when `blocks` is absent, so older artifacts keep working. */
+  html?: string;
   /** One-liner on the screen's PURPOSE (not its layout). */
   notes?: string;
   /** Prose pointer to the research that drove this screen — the feature it
@@ -288,6 +332,63 @@ const VALID_FLOW_TYPES: WireframeFlowType[] = [
   "onboarding", "core", "settings", "error", "empty", "auth", "other",
 ];
 
+const KNOWN_BLOCK_TYPES = new Set<WireframeBlockType>([
+  "heading", "text", "input", "button", "buttonGroup", "list", "card", "image",
+  "media", "chips", "metricRow", "field", "toggleRow", "segmented", "hero",
+  "divider", "spacer",
+]);
+
+/** Keep only well-formed blocks (an object with a known `type`). The renderer is
+ *  defensive about the rest, so we pass them through largely as-is. */
+function parseBlocks(raw: unknown): WireframeBlock[] {
+  if (!Array.isArray(raw)) return [];
+  const out: WireframeBlock[] = [];
+  for (const b of raw) {
+    if (!b || typeof b !== "object") continue;
+    const t = (b as { type?: unknown }).type;
+    if (typeof t === "string" && KNOWN_BLOCK_TYPES.has(t as WireframeBlockType)) {
+      out.push(b as WireframeBlock);
+    }
+  }
+  return out;
+}
+
+function parseAppBar(raw: unknown): WireframeAppBar | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  const leading =
+    o.leading === "back" || o.leading === "menu" || o.leading === "none"
+      ? o.leading
+      : undefined;
+  const trailing = isStringArr(o.trailing) ? o.trailing : undefined;
+  const title = typeof o.title === "string" ? o.title : undefined;
+  if (title === undefined && !leading && !trailing) return undefined;
+  return { title, leading, trailing };
+}
+
+function parseBottomBar(raw: unknown): WireframeBottomBar | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  if (o.kind === "nav" && Array.isArray(o.items)) {
+    const items = o.items
+      .filter((i): i is Record<string, unknown> => !!i && typeof i === "object")
+      .map((i) => ({ label: String(i.label ?? ""), active: i.active === true }))
+      .filter((i) => i.label);
+    return items.length > 0 ? { kind: "nav", items } : undefined;
+  }
+  if (o.kind === "actions" && Array.isArray(o.buttons)) {
+    const buttons = o.buttons
+      .filter((b): b is Record<string, unknown> => !!b && typeof b === "object")
+      .map((b) => ({
+        label: String(b.label ?? ""),
+        variant: b.variant === "secondary" ? ("secondary" as const) : ("primary" as const),
+      }))
+      .filter((b) => b.label);
+    return buttons.length > 0 ? { kind: "actions", buttons } : undefined;
+  }
+  return undefined;
+}
+
 export function parseWireframeFlow(p: unknown): WireframeFlowPayload | null {
   if (!p || typeof p !== "object") return null;
   const obj = p as Record<string, unknown>;
@@ -303,11 +404,17 @@ export function parseWireframeFlow(p: unknown): WireframeFlowPayload | null {
     if (!s || typeof s !== "object") continue;
     const sObj = s as Record<string, unknown>;
     const name = typeof sObj.name === "string" ? sObj.name.trim() : "";
+    if (!name) continue;
+    const blocks = parseBlocks(sObj.blocks);
     const html = typeof sObj.html === "string" ? sObj.html : "";
-    if (!name || !html) continue;
+    // A screen needs either typed blocks (preferred) or legacy html.
+    if (blocks.length === 0 && !html) continue;
     screens.push({
       name,
-      html,
+      blocks: blocks.length > 0 ? blocks : undefined,
+      appBar: parseAppBar(sObj.appBar),
+      bottomBar: parseBottomBar(sObj.bottomBar),
+      html: html || undefined,
       notes: typeof sObj.notes === "string" ? sObj.notes : undefined,
       derived_from: typeof sObj.derived_from === "string" ? sObj.derived_from : undefined,
     });

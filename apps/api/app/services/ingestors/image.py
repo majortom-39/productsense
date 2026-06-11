@@ -73,6 +73,7 @@ class ImageIngestor(Ingestor):
             )
             response = await gemini.call(
                 model=settings.subagent_model,
+                system="",
                 contents=[user_part],
                 max_output_tokens=1200,
             )

@@ -9,12 +9,15 @@ import {
   CheckCircle2,
   Sparkles,
   AlertCircle,
+  Boxes,
 } from "lucide-react";
-import type { Prd, Decision } from "@/lib/api";
+import type { Prd, Decision, Feature } from "@/lib/api";
 
 interface Props {
   prd: Prd | null;
   decisions: Decision[];
+  /** Features — the MVP cut renders at the top of the PRD ("what we're building"). */
+  features?: Feature[];
   onAskMaya?: (selectedText: string) => void;
 }
 
@@ -34,11 +37,7 @@ function parseSections(md: string): Section[] {
     const m = line.match(/^##\s+(.+?)\s*$/);
     if (m) {
       if (current) {
-        sections.push({
-          id: slugify(current.title),
-          title: current.title,
-          body: current.bodyLines.join("\n").trim(),
-        });
+        sections.push({ id: slugify(current.title), title: current.title, body: current.bodyLines.join("\n").trim() });
       }
       current = { title: m[1], bodyLines: [] };
     } else if (current) {
@@ -46,11 +45,7 @@ function parseSections(md: string): Section[] {
     }
   }
   if (current) {
-    sections.push({
-      id: slugify(current.title),
-      title: current.title,
-      body: current.bodyLines.join("\n").trim(),
-    });
+    sections.push({ id: slugify(current.title), title: current.title, body: current.bodyLines.join("\n").trim() });
   }
   return sections;
 }
@@ -59,7 +54,7 @@ function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-export function PrdViewer({ prd, decisions, onAskMaya }: Props) {
+export function PrdViewer({ prd, decisions, features = [], onAskMaya }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
@@ -67,7 +62,16 @@ export function PrdViewer({ prd, decisions, onAskMaya }: Props) {
 
   const sections = useMemo(() => parseSections(prd?.body_md ?? ""), [prd]);
   const openQuestions = decisions.filter((d) => d.status === "open").length;
-  const guardrailsCount = decisions.filter((d) => d.tag === "guardrail" && d.status === "decided").length;
+  const guardrails = useMemo(
+    () => decisions.filter((d) => d.tag === "guardrail" && d.status === "decided"),
+    [decisions],
+  );
+  // The MVP cut: features marked in_mvp. Before the cut, show all features as
+  // "proposed" so the founder always sees the scope on the PRD tab.
+  const inMvp = useMemo(() => features.filter((f) => f.in_mvp), [features]);
+  const mvpFeatures = inMvp.length > 0 ? inMvp : features;
+  const mvpPending = inMvp.length === 0 && features.length > 0;
+
   const projectTitle = useMemo(() => {
     const first = prd?.body_md?.match(/^#\s+(.+?)\s*$/m);
     return first ? first[1] : "Product";
@@ -90,11 +94,7 @@ export function PrdViewer({ prd, decisions, onAskMaya }: Props) {
       const rect = range.getBoundingClientRect();
       const cont = containerRef.current?.getBoundingClientRect();
       if (!cont) return;
-      setTooltip({
-        x: rect.left + rect.width / 2 - cont.left,
-        y: rect.top - cont.top - 8,
-        text,
-      });
+      setTooltip({ x: rect.left + rect.width / 2 - cont.left, y: rect.top - cont.top - 8, text });
     }
     document.addEventListener("mouseup", handleMouseUp);
     return () => document.removeEventListener("mouseup", handleMouseUp);
@@ -104,19 +104,17 @@ export function PrdViewer({ prd, decisions, onAskMaya }: Props) {
     setActiveSection(id);
     const el = scrollRef.current?.querySelector(`[data-section="${id}"]`);
     if (el && scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: (el as HTMLElement).offsetTop - 24,
-        behavior: "smooth",
-      });
+      scrollRef.current.scrollTo({ top: (el as HTMLElement).offsetTop - 24, behavior: "smooth" });
     }
   }
 
-  if (!prd) {
+  // Truly empty only when there's no PRD, no features, and no guardrails yet.
+  if (!prd && mvpFeatures.length === 0 && guardrails.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-6">
         <p className="text-sm font-medium text-foreground">PRD will appear here</p>
         <p className="text-xs text-muted-foreground max-w-[260px] leading-relaxed">
-          Maya drafts it as you talk. Select any sentence and the "Ask Maya" tooltip appears.
+          Maya drafts it as you talk — the MVP feature list, the spec, and the guardrails all live here.
         </p>
       </div>
     );
@@ -128,7 +126,7 @@ export function PrdViewer({ prd, decisions, onAskMaya }: Props) {
         <div className="flex items-center gap-2">
           <FileText size={14} className="text-muted-foreground" />
           <h3 className="text-sm font-semibold text-foreground">prd.md</h3>
-          {openQuestions === 0 ? (
+          {prd && (openQuestions === 0 ? (
             <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-medium border border-emerald-100 flex items-center gap-1">
               <CheckCircle2 size={9} />
               All sections answered
@@ -138,32 +136,28 @@ export function PrdViewer({ prd, decisions, onAskMaya }: Props) {
               <AlertCircle size={9} />
               {openQuestions} open question{openQuestions === 1 ? "" : "s"}
             </span>
-          )}
+          ))}
         </div>
         <div className="flex items-center gap-2">
-          {guardrailsCount > 0 && (
-            <span
-              className="px-2.5 py-1 rounded-md text-[10.5px] font-medium bg-rose-50 text-rose-700 border border-rose-100 flex items-center gap-1"
-              title="Guardrails active for this project"
-            >
+          {guardrails.length > 0 && (
+            <span className="px-2.5 py-1 rounded-md text-[10.5px] font-medium bg-rose-50 text-rose-700 border border-rose-100 flex items-center gap-1" title="Guardrails active for this project">
               <ShieldAlert size={10} />
-              {guardrailsCount} guardrail{guardrailsCount === 1 ? "" : "s"} active
+              {guardrails.length} guardrail{guardrails.length === 1 ? "" : "s"}
             </span>
           )}
-          <span className="text-[11px] text-muted-foreground flex items-center gap-1.5 px-2 py-1 rounded-md">
-            <History size={11} />
-            v{prd.version}
-          </span>
+          {prd && (
+            <span className="text-[11px] text-muted-foreground flex items-center gap-1.5 px-2 py-1 rounded-md">
+              <History size={11} />
+              v{prd.version}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="flex-1 flex min-h-0">
-        {/* Section TOC */}
         {sections.length > 0 && (
           <nav className="w-[200px] flex-shrink-0 border-r border-border overflow-y-auto py-5 px-3 hidden md:block">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 px-2">
-              Sections
-            </p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 px-2">Sections</p>
             <ul className="space-y-0.5">
               {sections.map((s, i) => {
                 const active = activeSection === s.id;
@@ -172,16 +166,10 @@ export function PrdViewer({ prd, decisions, onAskMaya }: Props) {
                     <button
                       onClick={() => jumpTo(s.id)}
                       className={`w-full text-left px-2 py-1.5 rounded-md text-[11.5px] leading-snug transition-colors flex items-start gap-1.5 ${
-                        active
-                          ? "bg-secondary text-foreground font-medium"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                        active ? "bg-secondary text-foreground font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                       }`}
                     >
-                      <span
-                        className={`text-[10px] font-mono mt-0.5 ${
-                          active ? "text-foreground/60" : "text-muted-foreground/60"
-                        }`}
-                      >
+                      <span className={`text-[10px] font-mono mt-0.5 ${active ? "text-foreground/60" : "text-muted-foreground/60"}`}>
                         {String(i + 1).padStart(2, "0")}
                       </span>
                       <span className="flex-1">{s.title}</span>
@@ -193,17 +181,43 @@ export function PrdViewer({ prd, decisions, onAskMaya }: Props) {
           </nav>
         )}
 
-        {/* PRD body */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
           <div className="max-w-[640px] mx-auto">
-            <h1 className="text-[22px] font-semibold text-foreground mb-1 leading-tight">
-              {projectTitle}
-            </h1>
+            <h1 className="text-[22px] font-semibold text-foreground mb-1 leading-tight">{projectTitle}</h1>
             <p className="text-[12px] text-muted-foreground mb-8">
-              Product Requirements Document · drafted by Maya · v{prd.version}
+              Product Requirements Document · drafted by Maya{prd ? ` · v${prd.version}` : " (in progress)"}
             </p>
 
-            {sections.length > 0 ? (
+            {/* ── What we're building (MVP) — the feature list at the top ── */}
+            {mvpFeatures.length > 0 && (
+              <section className="mb-8 rounded-2xl border border-border bg-muted/30 p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Boxes size={14} className="text-foreground/70" />
+                  <h2 className="text-[14px] font-semibold text-foreground">
+                    What we're building {mvpPending ? "(MVP cut pending)" : "(MVP)"}
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-medium border border-border">
+                    {mvpFeatures.length}
+                  </span>
+                </div>
+                <ul className="space-y-2.5">
+                  {mvpFeatures.map((f) => (
+                    <li key={f.id} className="flex items-start gap-2.5">
+                      <CheckCircle2 size={13} className="text-foreground/40 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-foreground leading-snug">{f.title}</p>
+                        {f.description && (
+                          <p className="text-[12px] text-muted-foreground leading-relaxed">{f.description}</p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* ── The spec ── */}
+            {prd && sections.length > 0 ? (
               <div className="space-y-7">
                 {sections.map((s) => (
                   <section key={s.id} data-section={s.id} className="group/section">
@@ -226,10 +240,43 @@ export function PrdViewer({ prd, decisions, onAskMaya }: Props) {
                   </section>
                 ))}
               </div>
-            ) : (
+            ) : prd ? (
               <div className="prose prose-warm prose-sm max-w-none text-[13px] leading-relaxed text-foreground/85">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{prd.body_md}</ReactMarkdown>
               </div>
+            ) : (
+              <p className="text-[12px] text-muted-foreground italic">
+                The full spec hasn't been drafted yet — Maya writes it once the scope is settled.
+              </p>
+            )}
+
+            {/* ── Guardrails / constraints (non-negotiables) ── */}
+            {guardrails.length > 0 && (
+              <section className="mt-9 rounded-2xl border border-rose-100 bg-rose-50/40 p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShieldAlert size={14} className="text-rose-700" />
+                  <h2 className="text-[14px] font-semibold text-foreground">Guardrails — non-negotiables</h2>
+                </div>
+                <ul className="space-y-3">
+                  {guardrails.map((g) => (
+                    <li key={g.id} className="group/g">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[13px] font-medium text-foreground leading-snug">{g.title}</p>
+                        {onAskMaya && (
+                          <button
+                            onClick={() => onAskMaya(`Guardrail ${g.display_id} — ${g.title}\n\n${g.detail}`)}
+                            className="opacity-0 group-hover/g:opacity-100 transition-opacity px-1.5 py-0.5 rounded text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted"
+                            title="Ask Maya about this guardrail"
+                          >
+                            Ask Maya
+                          </button>
+                        )}
+                      </div>
+                      {g.detail && <p className="text-[12px] text-muted-foreground leading-relaxed">{g.detail}</p>}
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
 
             <div className="mt-10 pt-5 border-t border-border text-[11px] text-muted-foreground">

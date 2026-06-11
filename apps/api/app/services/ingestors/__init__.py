@@ -12,6 +12,7 @@ from .pdf import PdfIngestor
 from .code import CodeIngestor
 from .csv_ import CsvIngestor
 from .image import ImageIngestor
+from .office import OfficeIngestor
 
 __all__ = [
     "Ingestor",
@@ -24,4 +25,5 @@ __all__ = [
     "CodeIngestor",
     "CsvIngestor",
     "ImageIngestor",
+    "OfficeIngestor",
 ]

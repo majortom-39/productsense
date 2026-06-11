@@ -2,7 +2,7 @@
 
 Thin LangChain `@tool` wrappers around `app.services.firecrawl`. Only the
 web-bound specialists (Iris, Aiden, Zara, Hugo, Theo) get these; the
-synthesis-only specialists (Nora, Kai, Wes) work from the context Maya passes
+synthesis-only specialists (Nora, Kai) work from the context Maya passes
 them and take no tools.
 
 The underlying firecrawl functions are async and return a clear error string

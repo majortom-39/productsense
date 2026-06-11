@@ -5,7 +5,7 @@
  * rendered through the ArtifactRenderer (→ WireframeFlowCard). Read-only;
  * "Add to chat" quotes a flow back to Maya for refinement.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Layout, MessageSquarePlus } from "lucide-react";
 import type { DiscoveryArtifact } from "@/lib/api";
 import { ArtifactRenderer } from "@/components/artifacts";
@@ -32,6 +32,15 @@ export function ScreensTab({ items, onAddToChat }: Props) {
     [items],
   );
 
+  // Each flow is its own sub-tab; show one at a time rather than stacking.
+  const [activeFlowId, setActiveFlowId] = useState<string | null>(flows[0]?.id ?? null);
+  useEffect(() => {
+    if (!activeFlowId || !flows.some((f) => f.id === activeFlowId)) {
+      setActiveFlowId(flows[0]?.id ?? null);
+    }
+  }, [flows, activeFlowId]);
+  const activeFlow = flows.find((f) => f.id === activeFlowId) ?? flows[0] ?? null;
+
   if (flows.length === 0) {
     return (
       <div className="h-full flex flex-col">
@@ -57,31 +66,54 @@ export function ScreensTab({ items, onAddToChat }: Props) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-foreground">Screens</h3>
-          <span className="px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-medium border border-border">
-            {flows.length} {flows.length === 1 ? "flow" : "flows"}
-          </span>
+      <div className="px-5 pt-4 pb-0 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground">Screens</h3>
+            <span className="px-2 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-medium border border-border">
+              {flows.length} {flows.length === 1 ? "flow" : "flows"}
+            </span>
+          </div>
+          <p className="text-[10.5px] text-muted-foreground italic">
+            Greyscale wireframes · read-only — discuss changes with Maya
+          </p>
         </div>
-        <p className="text-[10.5px] text-muted-foreground italic">
-          Greyscale wireframes · read-only — discuss changes with Maya
-        </p>
+
+        {/* Flow sub-tabs — one per flow; switch instead of scrolling a stack. */}
+        <div className="flex items-center gap-1 overflow-x-auto -mb-px">
+          {flows.map((flow) => {
+            const isActive = flow.id === activeFlow?.id;
+            return (
+              <button
+                key={flow.id}
+                onClick={() => setActiveFlowId(flow.id)}
+                title={flow.title}
+                className={`px-3 py-2 text-[12px] font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  isActive
+                    ? "border-foreground text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {flow.title}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
-        {flows.map((flow) => (
-          <section key={flow.id}>
+      {activeFlow && (
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+          <section>
             <header className="flex items-start justify-between gap-3 mb-3">
               <div className="min-w-0">
-                <h3 className="text-[14px] font-semibold text-foreground leading-snug">{flow.title}</h3>
-                {flow.summary && (
-                  <p className="mt-0.5 text-[12px] text-foreground/75 leading-relaxed">{flow.summary}</p>
+                <h3 className="text-[14px] font-semibold text-foreground leading-snug">{activeFlow.title}</h3>
+                {activeFlow.summary && (
+                  <p className="mt-0.5 text-[12px] text-foreground/75 leading-relaxed">{activeFlow.summary}</p>
                 )}
               </div>
               {onAddToChat && (
                 <button
-                  onClick={() => onAddToChat(flowToQuote(flow))}
+                  onClick={() => onAddToChat(flowToQuote(activeFlow))}
                   title="Quote this flow in chat — Maya can refine or redraw it"
                   className="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10.5px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
@@ -90,10 +122,10 @@ export function ScreensTab({ items, onAddToChat }: Props) {
                 </button>
               )}
             </header>
-            <ArtifactRenderer render_kind={flow.render_kind} payload={flow.payload} textBody={flow.summary} />
+            <ArtifactRenderer render_kind={activeFlow.render_kind} payload={activeFlow.payload} textBody={activeFlow.summary} />
           </section>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

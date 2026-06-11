@@ -99,6 +99,25 @@ const TaskCard: React.FC<{
         </p>
       )}
 
+      {/* Acceptance — the definition of done. The single biggest quality lever
+          for the coding agent, so it's always visible (not tucked in a details). */}
+      {!isDone && task.acceptance && task.acceptance.length > 0 && (
+        <div className="px-2.5 py-1.5 rounded-md bg-emerald-50/60 border border-emerald-100 text-[10.5px] text-emerald-900 leading-relaxed">
+          <p className="flex items-center gap-1 font-medium text-emerald-700 text-[10px] uppercase tracking-wide mb-1">
+            <Check size={9} />
+            done when
+          </p>
+          <ul className="space-y-0.5">
+            {task.acceptance.map((a, i) => (
+              <li key={i} className="pl-2 relative">
+                <span className="absolute left-0 top-1 w-0.5 h-0.5 rounded-full bg-emerald-400" />
+                {a}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {openDecision && (
         <OpenDecisionChip
           decision={openDecision}

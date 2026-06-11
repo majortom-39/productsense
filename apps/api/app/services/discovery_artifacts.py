@@ -86,6 +86,44 @@ def create(
     return (row.data or [{}])[0]
 
 
+def update(
+    *,
+    artifact_id: str,
+    project_id: str,
+    title: Optional[str] = None,
+    summary: Optional[str] = None,
+    render_kind: Optional[str] = None,
+    payload: Optional[dict] = None,
+) -> dict:
+    """Patch an artifact in place. Only the provided fields change. Refuses
+    cross-project edits and edits to deleted rows (make a new one instead)."""
+    existing = get(artifact_id)
+    if not existing:
+        raise ValueError(f"artifact not found: {artifact_id}")
+    if existing.get("project_id") != project_id:
+        raise ValueError("artifact belongs to a different project")
+    if existing.get("deleted_at"):
+        raise ValueError("artifact is archived; create a new one instead")
+
+    patch: dict = {}
+    if title is not None:
+        patch["title"] = title.strip() or existing["title"]
+    if summary is not None:
+        patch["summary"] = summary
+    if render_kind is not None:
+        patch["render_kind"] = _coerce_render_kind(render_kind)
+    if payload is not None:
+        if not isinstance(payload, dict):
+            raise ValueError("payload must be an object")
+        patch["payload"] = payload
+    if not patch:
+        return existing
+
+    db = require_admin()
+    row = db.table("discovery_artifacts").update(patch).eq("id", artifact_id).execute()
+    return (row.data or [{}])[0]
+
+
 def delete(*, artifact_id: str, project_id: str) -> dict:
     """Soft delete — set deleted_at. Idempotent on already-deleted rows."""
     existing = get(artifact_id)

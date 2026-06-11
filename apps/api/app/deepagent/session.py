@@ -41,6 +41,7 @@ from langgraph.types import Command
 from app.deepagent.coordinator import build_maya
 from app.deepagent.domain_tools import set_active_project
 from app.services import agent_runs_store
+from app.services import assets as assets_svc
 from app.services import checkpointer as checkpointer_svc
 from app.services import messages as msg_store
 
@@ -59,7 +60,6 @@ _SUBAGENT_LABELS = {
     "theo": "Theo (Tech Advisor)",
     "nora": "Nora (PRD Writer)",
     "kai": "Kai (Sprint Planner)",
-    "wes": "Wes (Guardrail Compiler)",
 }
 
 # domain tool -> founder-facing chip label.
@@ -134,6 +134,32 @@ class DeepMayaSession:
         # True while the graph is suspended on an ask_founder interrupt — the
         # next founder message is the ANSWER, not a new turn.
         self._awaiting_answer = False
+        # Signature of the attachment digest set last injected into a turn —
+        # files ride along exactly once per change, not on every message.
+        self._assets_sig: Optional[str] = None
+
+    def _with_attachments(self, user_msg: str) -> str:
+        """Prepend the founder's attached-file digests to a turn, when changed.
+
+        Best-effort: a DB hiccup must never block the founder's message. The
+        block is framed as background data (see assets.load_digests_for_maya);
+        the checkpointer keeps it in history, so once injected Maya can refer
+        back to it for the rest of the session without re-sending.
+        """
+        try:
+            block, sig = assets_svc.attachments_for_turn(self.project_id, self._assets_sig)
+        except Exception:
+            return user_msg
+        if sig is not None:
+            self._assets_sig = sig
+        if not block:
+            return user_msg
+        return (
+            "<attached_files>\n"
+            f"{block}\n"
+            "</attached_files>\n\n"
+            f"{user_msg}"
+        )
 
     # ─── lifecycle ──────────────────────────────────────────────────────
     def start(self, send_greeting: bool) -> None:
@@ -219,7 +245,7 @@ class DeepMayaSession:
             graph_input: Any = Command(resume={"answer": user_msg})
             self._awaiting_answer = False
         else:
-            graph_input = {"messages": [HumanMessage(content=user_msg)]}
+            graph_input = {"messages": [HumanMessage(content=self._with_attachments(user_msg))]}
 
         # tool_call_id -> tool name, captured from AIMessages so we can attribute
         # ToolMessage results back to the tool that produced them.

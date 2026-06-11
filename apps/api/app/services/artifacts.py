@@ -66,7 +66,7 @@ def _section_tokens(section_id: str) -> set[str]:
 
 def tokens_overlap(a: str, b: str) -> float:
     """Jaccard token overlap on two strings, using the same stop-token set
-    as section_id resolution. Returns 0..1. Used by Wes-dedup and any
+    as section_id resolution. Returns 0..1. Used by any
     other similarity check that operates on short imperative strings."""
     ta = _section_tokens(a)
     tb = _section_tokens(b)
@@ -414,7 +414,12 @@ def create_task(
 
 def list_tasks(project_id: str, status: Optional[str] = None) -> list[dict]:
     db = require_admin()
-    q = db.table("tasks").select("*").eq("project_id", project_id)
+    q = (
+        db.table("tasks")
+        .select("*")
+        .eq("project_id", project_id)
+        .is_("deleted_at", "null")
+    )
     if status:
         q = q.eq("status", status)
     rows = q.order("display_id").execute()
@@ -433,6 +438,81 @@ def update_task_status(task_id: str, status: str, agent_note: Optional[str] = No
     if agent_note:
         payload["agent_note"] = agent_note
     row = db.table("tasks").update(payload).eq("id", task_id).execute()
+    return row.data[0] if row.data else {}
+
+
+def get_active_sprint(project_id: str) -> Optional[dict]:
+    """The current live sprint — the highest-numbered active one. This is the
+    board Maya amends with add_task / update_task / remove_task; create_sprint is
+    only for starting a genuinely new sprint."""
+    db = require_admin()
+    rows = (
+        db.table("sprints")
+        .select("*")
+        .eq("project_id", project_id)
+        .eq("status", "active")
+        .order("number", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return (rows.data or [None])[0]
+
+
+def update_sprint(
+    sprint_id: str,
+    *,
+    name: Optional[str] = None,
+    subtitle: Optional[str] = None,
+    status: Optional[str] = None,
+) -> dict:
+    """Amend a sprint's own fields in place (name/subtitle/status). Only the
+    fields passed are written."""
+    db = require_admin()
+    payload: dict = {}
+    if name is not None:
+        payload["name"] = name
+    if subtitle is not None:
+        payload["subtitle"] = subtitle
+    if status is not None:
+        payload["status"] = status
+    if not payload:
+        return {}
+    row = db.table("sprints").update(payload).eq("id", sprint_id).execute()
+    return row.data[0] if row.data else {}
+
+
+# Columns a task can be patched on through the general edit path. Status + note
+# keep their dedicated helper (update_task_status) for the coding-agent MCP path;
+# this is the broader "edit the planned task" surface Maya uses.
+_TASK_PATCH_COLS = (
+    "title", "goal", "description", "acceptance", "verification", "do_not",
+    "prd_context", "blocked_by", "prompt_brief", "complexity", "status", "agent_note",
+)
+
+
+def patch_task(task_id: str, **fields) -> dict:
+    """Patch arbitrary task columns in place. Unknown / None values are dropped,
+    so callers pass only what they're changing."""
+    db = require_admin()
+    payload = {k: v for k, v in fields.items() if k in _TASK_PATCH_COLS and v is not None}
+    if not payload:
+        return {}
+    row = db.table("tasks").update(payload).eq("id", task_id).execute()
+    return row.data[0] if row.data else {}
+
+
+def delete_task(task_id: str, project_id: str) -> dict:
+    """Soft-delete a task — stamps deleted_at so it drops off the live board but
+    stays in the DB (provenance + history). Never a hard delete."""
+    from datetime import datetime, timezone
+    db = require_admin()
+    row = (
+        db.table("tasks")
+        .update({"deleted_at": datetime.now(timezone.utc).isoformat()})
+        .eq("id", task_id)
+        .eq("project_id", project_id)
+        .execute()
+    )
     return row.data[0] if row.data else {}
 
 
@@ -477,7 +557,7 @@ def log_decision(
     why: str,
     related_task_id: Optional[str] = None,
     tag: Optional[str] = None,
-    affects: Optional[list] = None,
+    affects: Optional[list] = None,   # vestigial: edges now live in the dependency graph, not a column
     status: str = "decided",
     open_type: Optional[str] = None,
     supersedes: Optional[str] = None,
@@ -486,7 +566,11 @@ def log_decision(
     stamped superseded_at + superseded_by in the same transaction (best-effort
     — Supabase REST doesn't expose multi-statement TXs, so we do it as two
     writes with the new row written first so we always have an authoritative
-    'replaced by' pointer)."""
+    'replaced by' pointer).
+
+    `affects` is accepted for back-compat but no longer persisted — the
+    decisions table has no `affects` column (relationships moved to the
+    dependency graph). Writing it 400s the whole insert, so we drop it."""
     db = require_admin()
     payload = {
         "project_id": project_id,
@@ -499,7 +583,6 @@ def log_decision(
         "why": why,
         "related_task_id": related_task_id,
         "tag": tag,
-        "affects": affects or [],
     }
     # Only include the supersession key when set — this keeps inserts
     # working against schemas that haven't applied migration

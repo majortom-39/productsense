@@ -1,0 +1,28 @@
+# Keep the build context small + secret-free (root-context build for apps/api).
+.git/
+node_modules/
+**/node_modules/
+apps/web/
+docs/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+.venv/
+venv/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+*.egg-info/
+**/*.egg-info/
+# Secrets — never into an image
+.env
+.env.*
+**/.env
+**/.env.*
+.mcp.json
+.claude/
+# Backend bits not needed at runtime
+apps/api/tests/
+apps/api/scripts/results/
+apps/api/_dbg.py
+apps/api/inspect_state.py

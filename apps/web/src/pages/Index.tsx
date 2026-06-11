@@ -213,6 +213,7 @@ export default function Index() {
           >
             <div className="w-full h-full min-w-[420px] flex">
               <RightPanel
+                projectId={activeProject.id}
                 discovery={artifacts.discovery}
                 prd={artifacts.prd}
                 tasks={artifacts.tasks}

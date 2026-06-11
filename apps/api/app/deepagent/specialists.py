@@ -9,10 +9,11 @@ uses), so it tracks the .env overrides 1:1. Three tiers by reasoning depth:
 
   deep + HIGH    — Theo, Kai          (architecture / sprint planning)
   mid  + MEDIUM  — Nora, Hugo         (canonical synthesis, pattern detection)
-  fast + none    — Iris, Aiden, Zara, Wes  (web research / formulaic output)
+  fast + none    — Iris, Aiden, Zara  (web research / formulaic output)
 
 Web-bound specialists (Iris, Aiden, Zara, Hugo, Theo) get the research tools.
-Synthesis-only specialists (Nora, Kai, Wes) work from the context Maya passes.
+Synthesis-only specialists (Nora, Kai) work from the context Maya passes.
+(Guardrails are compiled by Maya herself — no specialist needed.)
 """
 from __future__ import annotations
 
@@ -72,11 +73,6 @@ _SPECS: dict[str, tuple[_Tier, bool, str]] = {
         _DEEP, False,
         "Sprint Planner. Delegate to turn the PRD into an intent-level sprint "
         "board a coding agent can pick up.",
-    ),
-    "wes": (
-        _FAST, False,
-        "Guardrail Compiler. Delegate to compile the project's guardrails and "
-        "non-negotiables into a clean checklist.",
     ),
 }
 
