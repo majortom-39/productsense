@@ -19,6 +19,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from langchain.agents.structured_output import ToolStrategy
+
 from app.config import settings
 from app.deepagent.contracts import SpecialistResult
 from app.deepagent.models import build_chat_model
@@ -84,7 +86,12 @@ def _build_subagent(name: str) -> dict:
         "description": description,
         "system_prompt": build_specialist_prompt(name),
         "model": build_chat_model(tier.model, tier.thinking_level),
-        "response_format": SpecialistResult,
+        # ToolStrategy (NOT the provider's native JSON mode): the result arrives
+        # via a tool call, and handle_errors=True feeds any parse failure back
+        # to the model to retry. With native mode, one empty/malformed response
+        # raised straight through the task tool and killed Maya's whole turn —
+        # the founder just saw her go silent.
+        "response_format": ToolStrategy(SpecialistResult, handle_errors=True),
     }
     if gets_web:
         spec["tools"] = list(RESEARCH_TOOLS)

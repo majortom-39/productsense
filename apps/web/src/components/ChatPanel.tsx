@@ -119,17 +119,17 @@ const ThinkingBlock: React.FC<{ text: string; live?: boolean }> = ({ text, live 
   );
 };
 
+// Canonical specialist vocabulary — keyed by the BARE specialist name, which
+// is what both live events (evt.subagent) and hydrated agent_runs rows carry.
 const TOOL_PRETTY: Record<string, string> = {
-  invoke_iris: "Iris · Problem Validator",
-  invoke_aiden: "Aiden · Competitor Mapper",
-  invoke_hugo: "Hugo · Risk Researcher",
-  invoke_zara: "Zara · User Researcher",
-  invoke_theo: "Theo · Tech Advisor",
-  invoke_nora: "Nora · PRD Writer",
-  invoke_kai: "Kai · Sprint Planner",
-  invoke_wes: "Wes · Guardrail Proposer",
+  iris: "Iris · Problem Validator",
+  aiden: "Aiden · Competitor Mapper",
+  hugo: "Hugo · Risk Researcher",
+  zara: "Zara · User Researcher",
+  theo: "Theo · Tech Advisor",
+  nora: "Nora · PRD Writer",
+  kai: "Kai · Sprint Planner",
   log_decision: "Logging decision",
-  commit_guardrails: "Locking in guardrails",
   // Direct-LLM tools (NOT a sub-agent — render as such)
   verify: "Fact-checking · grounded search",
   // Maya's dashboard curation (rendered as compact one-liners, not full cards)
@@ -153,13 +153,7 @@ const COMPACT_TOOLS = new Set([
 
 /** Identify sub-agent tools whose result carries a render_kind we should
  *  show inline via ArtifactRenderer. */
-const RICH_RESULT_TOOLS = new Set([
-  "invoke_iris",
-  "invoke_aiden",
-  "invoke_hugo",
-  "invoke_zara",
-  "invoke_theo",
-]);
+const RICH_RESULT_TOOLS = new Set(["iris", "aiden", "hugo", "zara", "theo"]);
 
 function summariseArgs(args: Record<string, unknown>): string {
   if (!args || Object.keys(args).length === 0) return "";
@@ -177,24 +171,21 @@ function summariseArgs(args: Record<string, unknown>): string {
   return short ? short[1] : sorted[0][1].slice(0, 120) + "…";
 }
 
-/** Per-tool override for the collapsed dispatch line title.
- *  Synthesis/housekeeping tools have long input args (e.g. Wes gets the
- *  full failure-mode summary) that aren't usable as a one-line label.
- *  Returning a fixed string here short-circuits summariseArgs. */
+/** The collapsed dispatch line title — the start of Maya's actual brief
+ *  (args.description, present on every live AND hydrated dispatch), so the
+ *  founder sees WHAT was asked at a glance, not just who. */
 function dispatchTitleFor(tool: string, args: Record<string, unknown>): string {
+  const desc = typeof args?.description === "string" ? (args.description as string).trim() : "";
+  if (desc) {
+    // First line beats first 110 chars — briefs usually open with the ask.
+    const firstLine = desc.split("\n").find((l) => l.trim()) ?? "";
+    return firstLine.length > 110 ? firstLine.slice(0, 110) + "…" : firstLine;
+  }
   switch (tool) {
-    case "invoke_wes":
-      return "compiling guardrails";
-    case "invoke_nora":
+    case "nora":
       return "drafting the PRD";
-    case "update_prd_section": {
-      const sec = (args as { section_id?: string }).section_id;
-      return sec ? `updating PRD · ${sec}` : "updating PRD section";
-    }
-    case "invoke_kai":
+    case "kai":
       return "planning the sprint";
-    case "update_sprint_with_diff":
-      return "diffing the sprint against PRD changes";
     default:
       return summariseArgs(args);
   }
@@ -210,9 +201,14 @@ function dispatchTitleFor(tool: string, args: Record<string, unknown>): string {
 function mayaAskFor(tool: string, args: Record<string, unknown>): string {
   const a = args as Record<string, string | undefined>;
   const c = (k: string) => (typeof a[k] === "string" ? a[k]!.trim() : "");
-  const question = c("question");
 
-  // Research agents: question IS the prose. Context is a parenthetical tail.
+  // The new contract: Maya's FULL brief rides in `description` — that IS the
+  // query the founder wants to see ("what did Maya actually ask Zara?").
+  const description = c("description");
+  if (description) return description;
+
+  // Legacy hydrated rows (old architecture) — short readable fallbacks.
+  const question = c("question");
   if (question) {
     const tail: string[] = [];
     if (c("concept")) tail.push(`re: ${c("concept")}`);
@@ -221,41 +217,11 @@ function mayaAskFor(tool: string, args: Record<string, unknown>): string {
     const tailStr = tail.length ? ` (${tail.join(" · ")})` : "";
     return `${question}${tailStr}`;
   }
-
-  // Synthesis + housekeeping tools — keep the old short templates.
   switch (tool) {
-    case "invoke_nora":
-      return [
-        `Drafting the PRD from what we've got.`,
-        c("conversation_summary") && `Chat so far: ${c("conversation_summary").slice(0, 240)}…`,
-        c("research_summary") && `Research findings: ${c("research_summary").slice(0, 200)}…`,
-      ].filter(Boolean).join(" ");
-    case "update_prd_section":
-      return [
-        `Quick PRD section update.`,
-        c("section_id") && `Section: \`${c("section_id")}\`.`,
-        c("change_summary") && `Change: ${c("change_summary")}`,
-      ].filter(Boolean).join(" ");
-    case "invoke_kai":
-      return [
-        `Breaking the PRD into a sprint.`,
-        c("sprint_name") && `Sprint name: ${c("sprint_name")}.`,
-      ].filter(Boolean).join(" ");
-    case "update_sprint_with_diff":
-      return [
-        `PRD changed, diffing the sprint.`,
-        c("prd_section_changed") && `Section: ${c("prd_section_changed")}.`,
-        c("reason") && `Why: ${c("reason")}.`,
-      ].filter(Boolean).join(" ");
-    case "invoke_wes":
-      return `Distilling failure patterns into guardrail drafts (founder approves before they lock in).`;
-    case "commit_guardrails": {
-      const n = Array.isArray(a.drafts) ? (a.drafts as unknown[]).length : 0;
-      const note = c("approval_note");
-      return n > 0
-        ? `Locking in ${n} founder-approved guardrail${n === 1 ? "" : "s"}${note ? ` (${note})` : ""}.`
-        : `Locking in approved guardrails.`;
-    }
+    case "nora":
+      return "Drafting the PRD from what we've got.";
+    case "kai":
+      return "Breaking the PRD into a sprint.";
     case "verify":
       return c("claim") || "Fact-checking a claim.";
     default: {
@@ -266,16 +232,13 @@ function mayaAskFor(tool: string, args: Record<string, unknown>): string {
 }
 
 const TOOL_FIRST_NAME: Record<string, string> = {
-  invoke_iris: "Iris",
-  invoke_aiden: "Aiden",
-  invoke_hugo: "Hugo",
-  invoke_zara: "Zara",
-  invoke_theo: "Theo",
-  invoke_nora: "Nora",
-  update_prd_section: "Nora",
-  invoke_kai: "Kai",
-  update_sprint_with_diff: "Kai",
-  invoke_wes: "Wes",
+  iris: "Iris",
+  aiden: "Aiden",
+  hugo: "Hugo",
+  zara: "Zara",
+  theo: "Theo",
+  nora: "Nora",
+  kai: "Kai",
   // verify is NOT a sub-agent — it's a direct grounded LLM call. We
   // surface it with a different label below ("Fact-check") so the chat
   // doesn't imply Maya is talking to a person.
@@ -577,6 +540,14 @@ const AgentCallCard: React.FC<{
         </span>
       </button>
 
+      {/* Live ticker — what the specialist is doing RIGHT NOW. Kills the
+          1-3 minute research silence that made Maya feel frozen. */}
+      {isRunning && entry.activity && (
+        <div className="mt-1 ml-5 text-[11px] text-blue-700/80 italic animate-pulse">
+          {entry.activity}
+        </div>
+      )}
+
       {open && (
         <div className="mt-2 ml-1 pl-3 border-l-2 border-muted-foreground/15 space-y-3">
           {turns.map((turn, idx) => (
@@ -709,7 +680,11 @@ const AgentTurnView: React.FC<{
         ) : (
           <>
             <span className="text-muted-foreground italic">Maya → {agentName}: </span>
-            <span className="text-foreground/85">{mayaPrompt}</span>
+            {/* The full brief (incl. any context pack Maya attached). Long
+                briefs scroll instead of swallowing the chat. */}
+            <span className="text-foreground/85 whitespace-pre-wrap block max-h-[260px] overflow-y-auto mt-0.5">
+              {mayaPrompt}
+            </span>
           </>
         )}
         {clarification && (

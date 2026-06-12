@@ -62,48 +62,91 @@ _SUBAGENT_LABELS = {
     "kai": "Kai (Sprint Planner)",
 }
 
-# domain tool -> founder-facing chip label.
+# domain tool -> founder-facing chip label. Every persistence tool Maya owns
+# must appear here — a missing entry means the founder watches a black box
+# while the dashboard silently changes (or worse, doesn't refresh at all).
 _TOOL_LABELS = {
     "create_artifact": "Saved a finding",
     "update_artifact": "Updated a finding",
     "log_decision": "Logged a decision",
-    "open_question": "Opened a question",
+    "open_question": "Opened a question for you",
+    "resolve_question": "Closed an open question",
+    "update_decision": "Updated a decision",
     "create_solution": "Added a solution",
+    "update_solution": "Updated a solution",
     "create_feature": "Shaped a feature",
+    "update_feature": "Updated a feature",
+    "write_prd": "Wrote the PRD",
+    "create_sprint": "Published the sprint board",
+    "add_task": "Added a task to the sprint",
+    "update_task": "Updated a task",
+    "remove_task": "Removed a task",
+    "update_sprint": "Updated the sprint",
+    "archive_node": "Archived an item",
+    "supersede_node": "Replaced an item",
     "link": "Linked dependencies",
     "flag_change": "Flagged a change",
     "list_open_reviews": "Checked open reviews",
     "resolve_review": "Resolved a review flag",
 }
 
-# Domain tools that surface a chip in chat. The rest run silently (they still
-# fire artifact_hint refreshes — the chip is purely the chat marker).
+# Domain tools that surface a chip in chat. Read-back/plumbing tools
+# (list_nodes, get_node, gather_context, link, list_open_reviews) run silently —
+# they still fire artifact_hint refreshes where relevant.
 _CHIP_VISIBLE = {
     "create_artifact", "update_artifact", "log_decision", "open_question",
-    "create_solution", "create_feature", "flag_change",
+    "resolve_question", "update_decision", "create_solution", "update_solution",
+    "create_feature", "update_feature", "write_prd", "create_sprint",
+    "add_task", "update_task", "remove_task", "update_sprint",
+    "archive_node", "supersede_node", "flag_change",
+}
+
+# tool -> the right-panel surfaces it should refresh when it finishes. This is
+# what makes the dashboard fill in LIVE as Maya works — a missing entry means
+# the founder must reload to see the result.
+_TOOL_HINTS: dict[str, set[str]] = {
+    "create_artifact": {"discovery"},
+    "update_artifact": {"discovery", "reviews"},
+    "create_solution": {"solutions"},
+    "update_solution": {"solutions", "reviews"},
+    "create_feature": {"features", "prd"},
+    "update_feature": {"features", "prd", "reviews"},
+    # Guardrail decisions render inside the PRD, so decisions also nudge prd.
+    "log_decision": {"decisions", "prd", "reviews"},
+    "open_question": {"decisions"},
+    "resolve_question": {"decisions"},
+    "update_decision": {"decisions", "prd", "reviews"},
+    "write_prd": {"prd"},
+    "create_sprint": {"sprint"},
+    "add_task": {"sprint"},
+    "update_task": {"sprint"},
+    "remove_task": {"sprint"},
+    "update_sprint": {"sprint"},
+    # Archive/supersede can retire any node type — refresh broadly.
+    "archive_node": {"discovery", "decisions", "solutions", "features", "sprint"},
+    "supersede_node": {"discovery", "decisions", "solutions", "features"},
+    "flag_change": {"reviews"},
+    "resolve_review": {"reviews"},
 }
 
 
 def _hints_for(tool_name: str) -> set[str]:
     """Which right-panel surfaces a finished domain tool should refresh."""
-    if tool_name in ("create_artifact", "update_artifact"):
-        hints = {"discovery"}
-    elif tool_name == "create_solution":
-        hints = {"solutions"}
-    elif tool_name == "create_feature":
-        hints = {"features"}
-    elif tool_name in ("log_decision", "open_question"):
-        hints = {"decisions"}
-    elif tool_name == "link":
-        hints = set()
-    elif tool_name in ("flag_change", "resolve_review", "list_open_reviews"):
-        hints = {"reviews"}
-    else:
-        hints = set()
-    # Any update that can flip in_mvp / version also nudges the review badges.
-    if tool_name in ("update_artifact", "flag_change", "log_decision"):
-        hints.add("reviews")
-    return hints
+    return _TOOL_HINTS.get(tool_name, set())
+
+
+# Research-tool activity inside a specialist subgraph -> a founder-readable
+# line for the live ticker ("what is Zara actually doing right now?").
+def _activity_label(tool_name: str, args: dict) -> Optional[str]:
+    q = str(args.get("query") or "")[:90]
+    if tool_name == "web_search":
+        return f"Searching the web: “{q}”" if q else "Searching the web"
+    if tool_name == "reddit_research":
+        return f"Reading Reddit threads: “{q}”" if q else "Reading Reddit threads"
+    if tool_name == "crawl_website":
+        url = str(args.get("url") or "")[:90]
+        return f"Reading {url}" if url else "Reading a page"
+    return None
 
 
 def _flatten(content: Any) -> str:
@@ -229,6 +272,27 @@ class DeepMayaSession:
             self._done = True
             self._events.put_nowait(SENTINEL)
 
+    async def _has_pending_interrupt(self, agent, config) -> bool:
+        """The DURABLE truth about whether the graph is suspended on ask_founder.
+
+        The in-memory `_awaiting_answer` flag dies with the session (backend
+        restart, idle timeout, scale-out) while the graph stays suspended in the
+        checkpointer. Without this check, the founder's answer would be fed in
+        as a brand-new message against a suspended graph — the "Maya is
+        confused / doesn't follow" failure. Best-effort: on any error, fall
+        back to treating the message as new input.
+        """
+        try:
+            state = await agent.aget_state(config)
+        except Exception:
+            return False
+        if getattr(state, "interrupts", None):
+            return True
+        for t in getattr(state, "tasks", ()) or ():
+            if getattr(t, "interrupts", None):
+                return True
+        return False
+
     async def _handle(self, user_msg: str) -> None:
         """Run one founder turn (or resume an interrupt) through the coordinator."""
         # Bind the project on THIS context so the domain tools resolve it.
@@ -240,7 +304,10 @@ class DeepMayaSession:
             "recursion_limit": _RECURSION_LIMIT,
         }
 
-        if self._awaiting_answer:
+        # Resume-vs-new is decided by the CHECKPOINTER, not session memory:
+        # the fast-path flag is just a hint that avoids the state read.
+        resume = self._awaiting_answer or await self._has_pending_interrupt(agent, config)
+        if resume:
             # The founder is answering a pending ask_founder interrupt.
             graph_input: Any = Command(resume={"answer": user_msg})
             self._awaiting_answer = False
@@ -266,9 +333,18 @@ class DeepMayaSession:
 
         async def _drive():
             nonlocal interrupted
-            async for mode, chunk in agent.astream(
-                graph_input, config=config, stream_mode=["messages", "updates"]
+            # subgraphs=True so specialist activity is visible: chunks become
+            # (namespace, mode, payload), namespace () = Maya's own graph.
+            # Specialist TOKENS are never surfaced (Maya stays the single
+            # voice) — only their tool calls, as a live activity ticker.
+            async for ns, mode, chunk in agent.astream(
+                graph_input, config=config,
+                stream_mode=["messages", "updates"], subgraphs=True,
             ):
+                if ns:  # inside a specialist subgraph
+                    if mode == "updates" and isinstance(chunk, dict):
+                        self._on_subgraph_update(chunk)
+                    continue
                 if mode == "messages":
                     self._on_message_token(chunk)
                     continue
@@ -294,22 +370,53 @@ class DeepMayaSession:
         try:
             await asyncio.wait_for(_drive(), timeout=_TURN_TIMEOUT_SECONDS)
         except asyncio.TimeoutError:
-            self._emit("error", {
-                "message": (
-                    "Maya took too long and was stopped. Try a more specific ask."
-                ),
-            })
+            # The founder must HEAR this, not just see a transient banner — and
+            # it must survive a reload, so it's a persisted assistant message.
+            self._save_and_emit_assistant(
+                "That took longer than I allow myself, so I stopped midway. "
+                "Nothing is lost — say \"continue\" and I'll pick it back up, "
+                "or give me a narrower ask.",
+            )
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            self._emit("error", {"message": str(e)[:300]})
             print(f"[DeepMayaSession] turn error: {e}\n{traceback.format_exc()}")
+            self._emit("error", {"message": str(e)[:300]})
+            # Same rule: a failed turn ends with Maya SAYING so, durably. The
+            # checkpointer kept everything up to the failure, so "continue"
+            # genuinely resumes from where she left off.
+            self._save_and_emit_assistant(
+                "I hit a snag partway through that — one of my steps failed. "
+                "Nothing is lost: say \"continue\" and I'll pick up where I "
+                "left off.",
+            )
         finally:
             # If we suspended on an interrupt the input stays locked until the
             # founder answers; otherwise the turn is over and input unlocks.
             self._emit("turn_done", {"awaiting_answer": interrupted})
 
     # ─── stream handlers ────────────────────────────────────────────────
+    def _on_subgraph_update(self, chunk: dict) -> None:
+        """Surface a specialist's tool calls as live activity lines.
+
+        This is what turns the 1-3 minute research silence into a visible
+        ticker ("Searching the web: …", "Reading Reddit threads: …"). Only
+        tool CALLS are surfaced — specialist text never reaches the chat.
+        """
+        for update in chunk.values():
+            if not isinstance(update, dict):
+                continue
+            msgs = update.get("messages")
+            if not isinstance(msgs, list):
+                continue
+            for m in msgs:
+                if not isinstance(m, AIMessage):
+                    continue
+                for tc in getattr(m, "tool_calls", None) or []:
+                    label = _activity_label(tc.get("name") or "", tc.get("args") or {})
+                    if label:
+                        self._emit("agent_activity", {"action": label})
+
     def _on_message_token(self, chunk: Any) -> None:
         """messages-mode chunk = (message, metadata). Stream Maya's tokens."""
         msg = chunk[0] if isinstance(chunk, tuple) else chunk

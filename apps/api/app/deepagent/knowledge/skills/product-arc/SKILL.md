@@ -1,6 +1,6 @@
 ---
 name: product-arc
-description: The recommended path through product discovery for a non-technical founder — understanding (the problem, who the users are, their current journey and friction, and where it matters: positioning, success signals, riskiest assumptions) then converging and building (solutions, features, an explicit MVP cut, the UX screens, the PRD, guardrails, and an intent-level sprint board). Read this when you need orientation on what to do next, which specialist to call, or what a change ripples into. It is guidance you adapt, never a fixed sequence you must follow.
+description: "The recommended path through product discovery for a non-technical founder — understanding (the problem, who the users are, their current journey and friction, and where it matters: positioning, success signals, riskiest assumptions) then converging and building (solutions, features, an explicit MVP cut, the UX screens, the PRD, guardrails, and an intent-level sprint board). Read this when you need orientation on what to do next, which specialist to call, or what a change ripples into. It is guidance you adapt, never a fixed sequence you must follow."
 ---
 
 # Product Arc — the discovery playbook

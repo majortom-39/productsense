@@ -24,7 +24,8 @@ export interface AgentCallEntry {
   /** kind discriminator */
   kind: "agent_call";
   id: string;
-  tool: string;                   // e.g. "invoke_iris"
+  /** Canonical key = the BARE specialist name ("zara"), live and hydrated. */
+  tool: string;
   /** The chronological sequence of rounds. First turn = initial brief. */
   turns: AgentTurn[];
   // Convenience surface for the latest turn — keeps the existing card code happy.
@@ -33,6 +34,9 @@ export interface AgentCallEntry {
   result?: Record<string, unknown> | string;
   startedAt: string;
   completedAt?: string;
+  /** Live ticker while running — what the specialist is doing right now
+   *  ("Searching the web: …"). Transient; not persisted. */
+  activity?: string;
 }
 
 export interface ChatMessage {
@@ -228,7 +232,11 @@ function mergeHistoryItems(
         : "complete";
 
     const result = r.output_payload ?? null;
-    const args: Record<string, unknown> = {};
+    // Maya's brief to the specialist IS persisted (agent_runs.query) — carry
+    // it through as args.description, the same field live agent_start events
+    // use, so a reloaded card shows the exchange identically to a live one.
+    const args: Record<string, unknown> =
+      typeof r.query === "string" && r.query ? { description: r.query } : {};
 
     const turn: AgentTurn = {
       args,
@@ -238,12 +246,10 @@ function mergeHistoryItems(
       completedAt,
     };
 
-    // The tool name in `items[].tool` is the LangChain tool name
-    // ("invoke_aiden", "invoke_theo", …). Pure-function tools like
-    // log_decision / pin_artifact also live in agent_runs sometimes
-    // — we surface those under their raw name and the UI will fall
-    // back to displaying the agent_name as-is.
-    const tool = agentName.startsWith("invoke_") ? agentName : `invoke_${agentName}`;
+    // One canonical key for both live and hydrated cards: the BARE specialist
+    // name ("zara"). Legacy rows from the old architecture wrote
+    // "invoke_zara" — strip the prefix so they land on the same vocabulary.
+    const tool = agentName.replace(/^invoke_/, "");
 
     const entry: AgentCallEntry = {
       kind: "agent_call",
@@ -655,6 +661,21 @@ export function useMayaSession(projectId: string | null) {
             items: [...prev.items, entry],
           };
         }
+        case "agent_activity": {
+          // Live ticker line for the specialist that's currently working —
+          // attach to the most recent RUNNING agent card.
+          const action = typeof evt.action === "string" ? (evt.action as string) : "";
+          if (!action) return prev;
+          const items = [...prev.items];
+          for (let i = items.length - 1; i >= 0; i--) {
+            const it = items[i];
+            if (it.kind === "agent_call" && it.status === "running") {
+              items[i] = { ...it, activity: action };
+              return { ...prev, items };
+            }
+          }
+          return prev;
+        }
         case "state_update": {
           // Slim chip for non-dispatch tools — stage confirmations, decision
           // logging, artifact CRUD, etc. We only commit a visible chip on
@@ -721,6 +742,7 @@ export function useMayaSession(projectId: string | null) {
                 status: subStatus,
                 result: evt.result ?? null,
                 completedAt: new Date().toISOString(),
+                activity: undefined,
                 turns,
               };
               break;
