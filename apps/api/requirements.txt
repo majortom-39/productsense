@@ -23,6 +23,8 @@ deepagents==0.6.6
 psycopg[binary]==3.3.4
 psycopg-pool==3.3.1
 firecrawl-py==4.22.1
+# Hosted MCP endpoint (/mcp) the founder's coding agent connects to.
+mcp==1.21.2
 pypdf==6.3.0
 # Office docs → markdown for the asset ingestor. Lean extras only: docx/pptx/xlsx
 # (no audio/Azure/YouTube converters — images go straight to Gemini vision).

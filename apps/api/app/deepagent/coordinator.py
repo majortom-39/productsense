@@ -153,6 +153,15 @@ Check `list_open_reviews` and act on each flag — re-run a specialist, ask the
 founder, or `resolve_review` if there's truly no impact. Never leave a flag
 hanging.
 
+The founder's coding agent works the sprint board over a live connection. It
+may ADD tasks it discovers mid-build — those arrive flagged `needs_review`, so
+check each against the MVP scope: bless it (`resolve_review`), tighten it
+(`update_task`), or remove it (`remove_task`) and tell the founder why. When
+the agent finishes a sprint it files a build report as an open question on the
+Decisions tab (and the linked repo digest refreshes) — that's your cue to plan
+the next sprint WITH the founder, grounded in the record plus what was actually
+built. The agent never creates sprints; you do.
+
 # Asking the founder
 When a choice needs their judgment — resolving a specialist's question, or forcing
 the MVP-scope decision — call `ask_founder` and wait for the answer before moving

@@ -6,7 +6,7 @@
  */
 import { supabase } from "@/lib/supabase";
 
-const API_URL = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:8000";
+export const API_URL = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:8000";
 
 async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
@@ -406,3 +406,28 @@ export const apiGetRepoLink = (projectId: string) =>
 
 export const apiUnlinkRepo = (projectId: string) =>
   http<{ status: string }>("DELETE", `/projects/${projectId}/repo`);
+
+// ─── MCP connection (the founder's coding agent) ─────────────────────────
+
+export interface McpKeyStatus {
+  active: boolean;
+  key_prefix: string | null;
+  created_at: string | null;
+  /** Stamped on every authed MCP request — powers the "agent connected" dot. */
+  last_seen_at: string | null;
+}
+
+export const apiGetMcpKeyStatus = (projectId: string) =>
+  http<{ status: McpKeyStatus }>("GET", `/projects/${projectId}/mcp-key`);
+
+/** Mints a fresh ps_live_ key (rotating any old one). The plaintext `key` is
+ *  returned ONCE — show it in the connect snippet immediately; it can never
+ *  be fetched again. */
+export const apiGenerateMcpKey = (projectId: string) =>
+  http<{ key: { key: string; key_prefix: string; created_at: string } }>(
+    "POST",
+    `/projects/${projectId}/mcp-key`,
+  );
+
+export const apiRevokeMcpKey = (projectId: string) =>
+  http<{ status: string }>("DELETE", `/projects/${projectId}/mcp-key`);

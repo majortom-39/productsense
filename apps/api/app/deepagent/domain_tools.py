@@ -730,11 +730,11 @@ def update_task(
     title: str | None = None,
     goal: str | None = None,
     description: str | None = None,
-    acceptance: list | None = None,
-    verification: list | None = None,
-    do_not: list | None = None,
+    acceptance: list[str] | None = None,
+    verification: list[str] | None = None,
+    do_not: list[str] | None = None,
     prd_context: str | None = None,
-    blocked_by: list | None = None,
+    blocked_by: list[str] | None = None,
     prompt_brief: str | None = None,
     complexity: str | None = None,
 ) -> str:
@@ -774,18 +774,25 @@ def update_task(
 
 
 @tool
-def add_task(task: dict) -> str:
+def add_task(
+    title: str,
+    goal: str | None = None,
+    description: str | None = None,
+    acceptance: list[str] | None = None,
+    verification: list[str] | None = None,
+    do_not: list[str] | None = None,
+    prd_context: str | None = None,
+    blocked_by: list[str] | None = None,
+    prompt_brief: str | None = None,
+    complexity: str | None = None,
+) -> str:
     """Add a single task to the CURRENT (active) sprint — amend the live board
-    instead of recreating it. `task` has the same shape as one item in
-    create_sprint's list (title required; goal, description, acceptance,
-    verification, do_not, prd_context, blocked_by, prompt_brief, complexity
-    optional — keep it an intent-level vertical slice). It's numbered T-N after
-    the sprint's existing tasks. Use create_sprint only to start a new sprint.
+    instead of recreating it. Same fields as one item in create_sprint's list
+    (keep it an intent-level vertical slice). It's numbered T-N after the
+    sprint's existing tasks. Use create_sprint only to start a new sprint.
     """
     project_id = _project()
-    if not isinstance(task, dict):
-        return "Couldn't add task — expected a task object."
-    title = (task.get("title") or "").strip()
+    title = (title or "").strip()
     if not title:
         return "Couldn't add task — a title is required."
     sprint = artifacts_service.get_active_sprint(project_id)
@@ -801,15 +808,15 @@ def add_task(task: dict) -> str:
         sprint_id=sprint_id,
         display_id=f"T-{n}",
         title=title,
-        goal=task.get("goal"),
-        description=task.get("description"),
-        acceptance=task.get("acceptance") if isinstance(task.get("acceptance"), list) else None,
-        verification=task.get("verification") if isinstance(task.get("verification"), list) else None,
-        do_not=task.get("do_not") if isinstance(task.get("do_not"), list) else None,
-        prd_context=task.get("prd_context"),
-        blocked_by=task.get("blocked_by") if isinstance(task.get("blocked_by"), list) else None,
-        prompt_brief=task.get("prompt_brief"),
-        complexity=_norm_complexity(task.get("complexity")),
+        goal=goal,
+        description=description,
+        acceptance=acceptance,
+        verification=verification,
+        do_not=do_not,
+        prd_context=prd_context,
+        blocked_by=blocked_by,
+        prompt_brief=prompt_brief,
+        complexity=_norm_complexity(complexity),
     )
     return f"Added T-{n} '{title}' to sprint '{sprint.get('name')}'."
 

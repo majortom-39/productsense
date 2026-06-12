@@ -1,7 +1,15 @@
 # MCP — "Connect your coding agent" plan
 
-> Status: **agreed direction, not built yet.** Captured from a brainstorm so we
-> can revisit. Plain-language first, technical notes after.
+> Status: **BUILT (2026-06-11), as the hosted variant.** We went straight to
+> Option 2 — a key-authed MCP endpoint mounted at `/mcp` on the API service
+> (`app/mcp_remote.py`) — because per-project `ps_live_` keys in a header made
+> multi-tenant auth simple WITHOUT OAuth, and it removes the local-install
+> problem entirely (we never published a helper package). Everything else
+> happened as planned: `mcp_keys` table (hash-only), paste-prompt onboarding
+> from the per-project **Agent** button (`AgentControl.tsx`), last-seen
+> indicator, agent powers = read + task updates + flagged `add_task` +
+> `request_next_sprint` (never creates sprints). `apps/mcp/server.py` remains
+> as a local/dev variant. The notes below are the original brainstorm.
 
 ## What the MCP is for
 ProductSense is the **architect** (it produces the blueprints: sprint board, PRD,

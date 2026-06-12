@@ -6,6 +6,7 @@ import { PrdViewer } from "@/components/PrdViewer";
 import { SprintBoard } from "@/components/SprintBoard";
 import { DecisionsTab } from "@/components/DecisionsTab";
 import { RepoControl } from "@/components/RepoControl";
+import { AgentControl } from "@/components/AgentControl";
 import type { Decision, Prd, DiscoveryArtifact, Task, TaskStatus, Sprint, Solution, Feature, ReviewItem } from "@/lib/api";
 import type { ChatItem, Todo } from "@/hooks/useMayaSession";
 
@@ -186,10 +187,11 @@ export function RightPanel({
             </button>
           ))}
         </div>
-        {/* Per-project repo picker — the repo↔project link lives with the
-            project, not in global Settings. */}
-        <div className="shrink-0">
+        {/* The build side of the project: which repo the agent works in, and
+            the agent's own connection. Both per-project, not global Settings. */}
+        <div className="shrink-0 flex items-center gap-1.5">
           <RepoControl projectId={projectId} />
+          <AgentControl projectId={projectId} />
         </div>
       </div>
 

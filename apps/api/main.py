@@ -25,6 +25,7 @@ from app.config import settings
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
 from app.routes import health, projects, maya, artifacts, mcp_proxy, assets, integrations
 from app.services import checkpointer as _checkpointer_svc
+from app import mcp_remote
 
 
 # Boot banner — makes it obvious in logs which process/code is running.
@@ -74,7 +75,11 @@ async def lifespan(app: FastAPI):
     # the page, thinks, types) gets a hot pipeline.
     asyncio.create_task(_prewarm_vertex())
     try:
-        yield
+        # The hosted MCP endpoint's session manager must be running for the
+        # mounted /mcp app to serve requests (stateless mode still routes
+        # through it).
+        async with mcp_remote.server.session_manager.run():
+            yield
     finally:
         await _checkpointer_svc.close_checkpointer()
 
@@ -106,6 +111,31 @@ app.include_router(artifacts.router, tags=["artifacts"])
 app.include_router(assets.router, tags=["assets"])
 app.include_router(integrations.router, tags=["integrations"])
 app.include_router(mcp_proxy.router, tags=["mcp"])
+
+# The hosted MCP endpoint the founder's coding agent connects to. Key-authed
+# (X-PS-Key / Bearer ps_live_…) inside the mounted app itself — see mcp_remote.
+app.mount("/mcp", mcp_remote.app)
+
+
+class _McpPathNormalizer:
+    """Map the exact path '/mcp' to '/mcp/' before routing.
+
+    Starlette's Mount would otherwise 307-redirect the bare path, and not every
+    MCP client follows redirects on POST — the connect snippet advertises
+    '/mcp', so both spellings must just work."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http" and scope.get("path") == "/mcp":
+            scope = dict(scope)
+            scope["path"] = "/mcp/"
+            scope["raw_path"] = b"/mcp/"
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(_McpPathNormalizer)
 
 
 @app.get("/")

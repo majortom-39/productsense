@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.services import artifacts as art_svc, projects as proj_svc
+from app.services import mcp_keys as keys_svc
 from app.services.auth import CurrentUser
 from app.services.maya_clarify import clarify
 
@@ -19,6 +20,33 @@ router = APIRouter()
 def _ensure_owns(user_id: str, project_id: str) -> None:
     if not proj_svc.get(user_id, project_id):
         raise HTTPException(status_code=404, detail="Project not found")
+
+
+# ─── MCP keys (the founder's "connect your coding agent" panel) ───────────
+
+
+@router.get("/projects/{project_id}/mcp-key")
+async def mcp_key_status(project_id: str, user_id: CurrentUser) -> dict:
+    """Connection status: active key prefix + when the agent was last seen.
+    Never returns key material."""
+    _ensure_owns(user_id, project_id)
+    return {"status": keys_svc.status(project_id)}
+
+
+@router.post("/projects/{project_id}/mcp-key")
+async def mcp_key_generate(project_id: str, user_id: CurrentUser) -> dict:
+    """Mint a fresh ps_live_ key (rotating any previous one). The plaintext is
+    returned ONCE, for the connect snippet — it is never stored or shown again."""
+    _ensure_owns(user_id, project_id)
+    return {"key": keys_svc.generate(project_id)}
+
+
+@router.delete("/projects/{project_id}/mcp-key")
+async def mcp_key_revoke(project_id: str, user_id: CurrentUser) -> dict:
+    """Revoke the active key — disconnects the agent until a new key is made."""
+    _ensure_owns(user_id, project_id)
+    keys_svc.revoke(project_id)
+    return {"status": "revoked"}
 
 
 # ─── Task completion / files ──────────────────────────────────────────────

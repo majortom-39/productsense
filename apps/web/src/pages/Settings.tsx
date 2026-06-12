@@ -166,15 +166,14 @@ export default function Settings() {
         <section className="rounded-2xl border border-border bg-card p-6">
           <h2 className="text-[15px] font-semibold text-foreground mb-2">Coding agent</h2>
           <p className="text-[12px] text-muted-foreground leading-relaxed mb-3 max-w-md">
-            Maya talks to your coding agent (Claude Code, Cursor, etc.) over MCP. The
-            MCP server runs locally; add it to your agent's MCP config to give it
-            access to the project's PRD, sprint, decisions, and guardrails.
+            Your coding agent (Claude Code, Cursor, or any MCP-capable tool)
+            connects to each project to pick up sprint tasks, report progress,
+            and ask Maya questions when it's blocked.
           </p>
-          <p className="text-[11.5px] text-muted-foreground italic">
-            Detailed setup snippets coming soon. For now, run{" "}
-            <code className="px-1 py-0.5 rounded bg-muted">python apps/mcp/server.py</code>{" "}
-            and configure your agent to connect to{" "}
-            <code className="px-1 py-0.5 rounded bg-muted">http://localhost:8765</code>.
+          <p className="text-[12px] text-muted-foreground leading-relaxed max-w-md">
+            To connect: open a project and click the <strong>Agent</strong> button
+            in the top bar — it generates a key and a one-paste setup prompt for
+            your agent. No install needed; the connection is per-project.
           </p>
         </section>
       </div>
