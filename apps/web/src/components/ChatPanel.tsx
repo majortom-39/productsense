@@ -231,6 +231,21 @@ function mayaAskFor(tool: string, args: Record<string, unknown>): string {
   }
 }
 
+/** Chat-scale typography for model-authored markdown. One shared ramp so
+ *  Maya's bubbles and specialist replies stay CHAT-sized: headings become
+ *  compact bold lines (not document-scale 22px banners), rules stay thin,
+ *  code blocks are capped + scrollable instead of dominating the column. */
+const CHAT_MD =
+  "[&_h1]:text-[14px] [&_h1]:font-semibold [&_h1]:mt-3 [&_h1]:mb-1 " +
+  "[&_h2]:text-[13.5px] [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 " +
+  "[&_h3]:text-[13px] [&_h3]:font-semibold [&_h3]:mt-2.5 [&_h3]:mb-1 " +
+  "[&_h4]:text-[12.5px] [&_h4]:font-semibold [&_h4]:mt-2 [&_h4]:mb-0.5 " +
+  "[&_hr]:my-2.5 [&_hr]:border-border " +
+  "[&_pre]:text-[10.5px] [&_pre]:leading-snug [&_pre]:p-2.5 [&_pre]:rounded-lg " +
+  "[&_pre]:max-h-[220px] [&_pre]:overflow-auto [&_pre]:my-1.5 " +
+  "[&_table]:text-[12px] [&_th]:py-1 [&_td]:py-1 " +
+  "[&_blockquote]:my-1.5 [&_blockquote]:text-[12.5px]";
+
 const TOOL_FIRST_NAME: Record<string, string> = {
   iris: "Iris",
   aiden: "Aiden",
@@ -416,7 +431,7 @@ const StateUpdateChip: React.FC<{ entry: StateUpdateEntry }> = ({ entry }) => {
       </Wrapper>
       {isVerify && open && verifyFinding && (
         <div className="ml-3 pl-3 border-l-2 border-muted-foreground/15 text-[12px] text-foreground/85 space-y-2">
-          <div className="prose prose-sm prose-warm max-w-none [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic [&_code]:px-1 [&_code]:py-0.5 [&_code]:bg-muted/50 [&_code]:rounded">
+          <div className={`prose prose-sm prose-warm max-w-none [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic [&_code]:px-1 [&_code]:py-0.5 [&_code]:bg-muted/50 [&_code]:rounded ${CHAT_MD}`}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{verifyFinding}</ReactMarkdown>
           </div>
           {verifySources.length > 0 && (
@@ -680,10 +695,11 @@ const AgentTurnView: React.FC<{
         ) : (
           <>
             <span className="text-muted-foreground italic">Maya → {agentName}: </span>
-            {/* The full brief (incl. any context pack Maya attached). Long
-                briefs scroll instead of swallowing the chat. */}
-            <span className="text-foreground/85 whitespace-pre-wrap block max-h-[260px] overflow-y-auto mt-0.5">
-              {mayaPrompt}
+            {/* The full brief (incl. any context pack Maya attached). Blank-line
+                runs are collapsed and long briefs scroll instead of swallowing
+                the chat. */}
+            <span className="text-foreground/85 text-[11.5px] leading-relaxed whitespace-pre-wrap block max-h-[240px] overflow-y-auto mt-1 pr-2">
+              {mayaPrompt.replace(/\n{2,}/g, "\n").trim()}
             </span>
           </>
         )}
@@ -730,7 +746,7 @@ const AgentTurnView: React.FC<{
           {detail && (
             /* The specialist's full body of work (SpecialistResult.detail) —
                evidence bullets, the drafted artifact, the ranked list. */
-            <div className="mt-1.5 prose prose-sm prose-warm max-w-none text-foreground/80 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_em]:italic [&_h2]:text-[12.5px] [&_h3]:text-[12px] [&_code]:px-1 [&_code]:py-0.5 [&_code]:bg-muted/50 [&_code]:rounded">
+            <div className={`mt-1.5 prose prose-sm prose-warm max-w-none text-foreground/80 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_em]:italic [&_code]:px-1 [&_code]:py-0.5 [&_code]:bg-muted/50 [&_code]:rounded ${CHAT_MD}`}>
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{detail}</ReactMarkdown>
             </div>
           )}
@@ -860,7 +876,7 @@ const Bubble: React.FC<{ message: ChatMessage; isTurnLeader?: boolean }> = React
         </div>
       )}
       {message.quoted && <QuotedSnippet text={message.quoted} />}
-      <div className="prose prose-sm prose-warm max-w-none text-[14.5px] leading-[1.65] [&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_strong]:font-semibold [&_em]:italic">
+      <div className={`prose prose-sm prose-warm max-w-none text-[14.5px] leading-[1.65] [&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_strong]:font-semibold [&_em]:italic ${CHAT_MD}`}>
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponentsWithMermaid}>{message.content}</ReactMarkdown>
       </div>
     </AssistantRow>
@@ -1178,7 +1194,7 @@ export function ChatPanel({
                   // Maya's answer streaming token-by-token. Same prose styling
                   // as a committed Bubble so there's no visual jump when the
                   // final `message` lands and clears liveText.
-                  <div className="prose prose-sm prose-warm max-w-none text-[14.5px] leading-[1.65] [&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_strong]:font-semibold [&_em]:italic">
+                  <div className={`prose prose-sm prose-warm max-w-none text-[14.5px] leading-[1.65] [&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_strong]:font-semibold [&_em]:italic ${CHAT_MD}`}>
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponentsWithMermaid}>
                       {liveText || ""}
                     </ReactMarkdown>

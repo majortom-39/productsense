@@ -39,7 +39,10 @@ is the only coach. Your result has these fields:
   produced. Always fill this, in both branches. No jargon.
 - **detail** — the full body of your work as markdown: evidence bullets, the
   drafted artifact, the ranked list. Fill this when `status` is `complete`.
-  Leave empty when `status` is `needs_input`.
+  Leave empty when `status` is `needs_input`. This renders in a CHAT for a
+  non-technical founder: use `###` headings at most, short sections, bullets.
+  NEVER paste raw JSON, code blocks, or data dumps into `summary` or `detail`
+  — describe structured findings in plain words instead.
 - **questions** — when `status` is `needs_input`, the specific question(s) you
   need answered to proceed. Empty when `complete`.
 - **sources** — source URLs backing any web research. Never invent sources;

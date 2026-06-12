@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 import traceback
 from typing import Any, Optional
@@ -133,6 +134,36 @@ _TOOL_HINTS: dict[str, set[str]] = {
 def _hints_for(tool_name: str) -> set[str]:
     """Which right-panel surfaces a finished domain tool should refresh."""
     return _TOOL_HINTS.get(tool_name, set())
+
+
+_NODE_REF_RE = re.compile(
+    r"\b(?:artifact|decision|guardrail|solution|feature|task|sprint|prd_section)"
+    r":[0-9a-fA-F-]{8,40}\b"
+)
+
+
+def _chip_summary(result_text: str) -> Optional[str]:
+    """Founder-facing one-liner from a tool's return string.
+
+    Tool returns are written for MAYA — they carry node refs (UUIDs) she wires
+    edges with. The founder should see "Debate Analyzer Target Users", never
+    "artifact:5863a785-…". Strip refs and graph tails, keep the human part.
+    """
+    if not result_text:
+        return None
+    s = result_text
+    # Parentheticals that exist for the graph, not the founder.
+    s = re.sub(r"\([^)]*(?:derived from|" + _NODE_REF_RE.pattern + r")[^)]*\)", "", s)
+    s = _NODE_REF_RE.sub("", s)
+    # Leading bookkeeping verb (the chip label already says what happened).
+    s = re.sub(
+        r"^\s*(Created|Updated|Logged|Opened question|Opened|Added|Removed|"
+        r"Archived|Replaced|Resolved|Marked|Linked|Cleared)\b[\s:]*",
+        "", s, flags=re.I,
+    )
+    s = re.sub(r"\s+:", ":", s)
+    s = re.sub(r"\s{2,}", " ", s).strip(" :—-\n")
+    return s[:160] or None
 
 
 # Research-tool activity inside a specialist subgraph -> a founder-readable
@@ -524,14 +555,11 @@ class DeepMayaSession:
                 agent_runs_store.finish_run(call_run_ids.get(tcid), run_status, payload)
             elif name in _TOOL_LABELS:
                 if name in _CHIP_VISIBLE:
-                    summary = None
-                    if isinstance(result_text, str):
-                        summary = result_text[:200]
                     self._emit("state_update", {
                         "tool": name,
                         "label": _TOOL_LABELS.get(name, name),
                         "phase": "end",
-                        "summary": summary,
+                        "summary": _chip_summary(result_text) if isinstance(result_text, str) else None,
                     })
                 for hint in _hints_for(name):
                     self._emit("artifact_hint", {"kind": hint})
