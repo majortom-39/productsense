@@ -102,24 +102,31 @@ async def init_checkpointer() -> None:
         # way an unreachable DB at startup doesn't crash the app — we get
         # a clean error log instead.
         #
-        # Resiliency against Supabase dropping idle connections:
-        # - `min_size=0` — don't keep idle connections lingering. Supabase
-        #   kills connections after ~60s of NAT/firewall idleness, and a
-        #   killed-then-handed-out connection causes the exact failure mode
-        #   we saw in production: "consuming input failed: server closed
-        #   the connection unexpectedly".
-        # - `check=AsyncConnectionPool.check_connection` — run a `SELECT 1`
-        #   before lending a pooled connection. Dead connections get
-        #   silently discarded and replaced, so callers always see a
-        #   live connection.
-        # - `max_idle=30.0` — drop any idle connection that's been sitting
-        #   for >30s, well under Supabase's idle-kill window.
+        # IMPORTANT — endpoint: this pool MUST point at Supabase's SESSION
+        # pooler (port 5432 on the pooler host), NOT the transaction pooler
+        # (6543). A persistent client pool on the transaction pooler saturates
+        # Supavisor's per-tenant client slots as a session progresses, so new
+        # `getconn` calls hang to their full timeout — the production failure
+        # ("couldn't get a connection after 30.00 sec"). The session pooler
+        # gives each pooled connection a dedicated backend for its lifetime,
+        # which is exactly what a long-lived pool wants.
+        #
+        # Pool tuning:
+        # - `min_size=1` — keep one warm connection so a turn's first checkpoint
+        #   read doesn't pay a cold connect (and the pool never sits fully empty).
+        # - `timeout=10.0` — if the pool is genuinely starved, fail in 10s with a
+        #   clear error instead of freezing a turn for 30s.
+        # - `check=check_connection` — `SELECT 1` before lending, so a
+        #   server-killed idle connection is discarded + replaced, never handed out.
+        # - `max_idle=120.0` — recycle long-idle connections before any
+        #   server-side idle kill, without sub-minute churn.
         from psycopg_pool import AsyncConnectionPool as _Pool
         _pool = _Pool(
             conninfo=db_url,
-            min_size=0,
+            min_size=1,
             max_size=10,
-            max_idle=30.0,
+            timeout=10.0,
+            max_idle=120.0,
             check=_Pool.check_connection,
             kwargs={
                 # autocommit is REQUIRED for langgraph-checkpoint-postgres —

@@ -208,6 +208,11 @@ class DeepMayaSession:
         # True while the graph is suspended on an ask_founder interrupt — the
         # next founder message is the ANSWER, not a new turn.
         self._awaiting_answer = False
+        # The durable interrupt reconciliation (checkpointer truth vs the
+        # in-memory flag) runs ONCE per session, on the first message — not on
+        # every turn. After that the in-memory flag is authoritative, so we
+        # don't pay an extra checkpoint read (+ connection acquisition) per turn.
+        self._interrupt_checked = False
         # Signature of the attachment digest set last injected into a turn —
         # files ride along exactly once per change, not on every message.
         self._assets_sig: Optional[str] = None
@@ -335,9 +340,16 @@ class DeepMayaSession:
             "recursion_limit": _RECURSION_LIMIT,
         }
 
-        # Resume-vs-new is decided by the CHECKPOINTER, not session memory:
-        # the fast-path flag is just a hint that avoids the state read.
-        resume = self._awaiting_answer or await self._has_pending_interrupt(agent, config)
+        # Resume-vs-new: the in-memory flag is authoritative during a live
+        # session. We reconcile it against the checkpointer exactly ONCE — the
+        # first message after this session was (re)created — to catch a session
+        # that was rebuilt while the graph is suspended (backend restart / idle
+        # eviction mid-interrupt). After that, no per-turn state read.
+        if not self._interrupt_checked:
+            self._interrupt_checked = True
+            if not self._awaiting_answer and await self._has_pending_interrupt(agent, config):
+                self._awaiting_answer = True
+        resume = self._awaiting_answer
         if resume:
             # The founder is answering a pending ask_founder interrupt.
             graph_input: Any = Command(resume={"answer": user_msg})
