@@ -17,6 +17,7 @@ Gemini handles far more reliably than nested objects.
 from __future__ import annotations
 
 import contextvars
+import re
 from datetime import datetime, timezone
 
 from langchain_core.tools import tool
@@ -86,7 +87,12 @@ def _parse_ref(ref: str) -> tuple[str, str]:
 
 
 def _next_display_id(table: str, project_id: str, prefix: str, width: int = 0) -> str:
-    """Generate the next sequential display id for a per-project table."""
+    """Next display id = (max existing numeric suffix) + 1.
+
+    Max-based, not count-based, so deleting a row never causes id reuse. Still
+    racy under parallel inserts — always pair with `_insert_with_display_id`,
+    which retries on the resulting unique-constraint violation.
+    """
     db = require_admin()
     rows = (
         db.table(table)
@@ -94,8 +100,44 @@ def _next_display_id(table: str, project_id: str, prefix: str, width: int = 0) -
         .eq("project_id", project_id)
         .execute()
     )
-    n = len(rows.data or []) + 1
+    mx = 0
+    for r in rows.data or []:
+        m = re.search(r"(\d+)$", r.get("display_id") or "")
+        if m:
+            mx = max(mx, int(m.group(1)))
+    n = mx + 1
     return f"{prefix}{str(n).zfill(width)}" if width else f"{prefix}{n}"
+
+
+def _insert_with_display_id(
+    table: str, project_id: str, prefix: str, payload: dict,
+    *, width: int = 0, attempts: int = 6,
+) -> dict:
+    """Insert a node row with a freshly-computed display_id, retrying on the
+    (project_id, display_id) unique violation.
+
+    Gemini issues tool calls in PARALLEL, so two `create_feature`/`create_solution`
+    /`log_decision` calls in one turn can race to the same display_id and one
+    hits 23505 ("duplicate key ... features_project_id_display_id_key"). Instead
+    of failing the turn, we recompute the id and retry — the loser just becomes
+    the next number.
+    """
+    db = require_admin()
+    last_err: Exception | None = None
+    for _ in range(attempts):
+        did = _next_display_id(table, project_id, prefix, width)
+        try:
+            row = db.table(table).insert({**payload, "display_id": did}).execute()
+            return row.data[0] if row.data else {}
+        except Exception as e:
+            msg = str(e).lower()
+            if "23505" in msg or "duplicate key" in msg:
+                last_err = e
+                continue
+            raise
+    if last_err:
+        raise last_err
+    return {}
 
 
 def _wire_edges(
@@ -374,25 +416,21 @@ def log_decision(
             f"Couldn't log decision — these refs don't exist: {', '.join(bad)}. "
             "Use list_nodes/get_node to find valid refs."
         )
-    db = require_admin()
-    display_id = _next_display_id("decisions", project_id, "D-", width=3)
-    row = (
-        db.table("decisions")
-        .insert(
-            {
-                "project_id": project_id,
-                "display_id": display_id,
-                "decided_by": "maya_autonomous",
-                "status": "decided",
-                "title": title,
-                "detail": detail,
-                "why": why,
-                "tag": tag,
-            }
-        )
-        .execute()
+    row = _insert_with_display_id(
+        "decisions", project_id, "D-",
+        {
+            "project_id": project_id,
+            "decided_by": "maya_autonomous",
+            "status": "decided",
+            "title": title,
+            "detail": detail,
+            "why": why,
+            "tag": tag,
+        },
+        width=3,
     )
-    dec_id = row.data[0]["id"]
+    dec_id = row["id"]
+    display_id = row.get("display_id", "")
     ref = f"decision:{dec_id}"
     _wire_edges(ref, derived_from, "derives_from", "maya")
     _wire_edges(ref, constrains, "constrains", "maya")
@@ -406,26 +444,21 @@ def open_question(title, context: str) -> str:
     Use for questions that genuinely need the founder's brain. Returns its ref.
     """
     project_id = _project()
-    db = require_admin()
-    display_id = _next_display_id("decisions", project_id, "D-", width=3)
-    row = (
-        db.table("decisions")
-        .insert(
-            {
-                "project_id": project_id,
-                "display_id": display_id,
-                "decided_by": "maya_autonomous",
-                "status": "open",
-                "open_type": "escalated",
-                "title": title,
-                "detail": context,
-                "why": "Awaiting founder decision.",
-                "tag": "flagged",
-            }
-        )
-        .execute()
+    row = _insert_with_display_id(
+        "decisions", project_id, "D-",
+        {
+            "project_id": project_id,
+            "decided_by": "maya_autonomous",
+            "status": "open",
+            "open_type": "escalated",
+            "title": title,
+            "detail": context,
+            "why": "Awaiting founder decision.",
+            "tag": "flagged",
+        },
+        width=3,
     )
-    return f"Opened question {display_id} (decision:{row.data[0]['id']}): {title}"
+    return f"Opened question {row.get('display_id','')} (decision:{row['id']}): {title}"
 
 
 @tool
@@ -499,22 +532,17 @@ def create_solution(
     bad = _missing_refs(derived_from)
     if bad:
         return f"Couldn't create solution — these derived_from refs don't exist: {', '.join(bad)}."
-    db = require_admin()
-    display_id = _next_display_id("solutions", project_id, "sol-")
-    row = (
-        db.table("solutions")
-        .insert(
-            {
-                "project_id": project_id,
-                "display_id": display_id,
-                "title": title,
-                "summary": summary,
-                "recommended": recommended,
-            }
-        )
-        .execute()
+    row = _insert_with_display_id(
+        "solutions", project_id, "sol-",
+        {
+            "project_id": project_id,
+            "title": title,
+            "summary": summary,
+            "recommended": recommended,
+        },
     )
-    ref = f"solution:{row.data[0]['id']}"
+    display_id = row.get("display_id", "")
+    ref = f"solution:{row['id']}"
     _wire_edges(ref, derived_from, "derives_from", "maya")
     return f"Created {display_id} ({ref}): {title}"
 
@@ -535,22 +563,17 @@ def create_feature(
     bad = _missing_refs(derived_from)
     if bad:
         return f"Couldn't create feature — these derived_from refs don't exist: {', '.join(bad)}."
-    db = require_admin()
-    display_id = _next_display_id("features", project_id, "f-")
-    row = (
-        db.table("features")
-        .insert(
-            {
-                "project_id": project_id,
-                "display_id": display_id,
-                "title": title,
-                "description": description,
-                "in_mvp": in_mvp,
-            }
-        )
-        .execute()
+    row = _insert_with_display_id(
+        "features", project_id, "f-",
+        {
+            "project_id": project_id,
+            "title": title,
+            "description": description,
+            "in_mvp": in_mvp,
+        },
     )
-    ref = f"feature:{row.data[0]['id']}"
+    display_id = row.get("display_id", "")
+    ref = f"feature:{row['id']}"
     _wire_edges(ref, derived_from, "derives_from", "maya")
     return f"Created {display_id} ({ref}): {title}"
 

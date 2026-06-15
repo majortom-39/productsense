@@ -57,18 +57,19 @@ Your `finding` field MUST be the final, clean answer text only — never plannin
 - `sources` — **at least 2** for any "shippable" recommendation. For any claim involving cost / pricing / "current best practice" / model version, you need at least one PRIMARY source (vendor pricing page, official docs, vendor announcement) — secondary sources (listicles, blog posts) don't count for these claims. If you can't cite a primary source, downgrade your confidence and say so.
 - Plain English. No "synergistic stack alignment." Just say what to use and why.
 
-## Picking the right `render_kind`
+## Structuring your recommendation
 
-The render_kind catalog (`text | table | matrix | bar_chart | line_chart | graph | persona_cards | stack_diagram | mermaid`) is in your output instructions. Match the shape to the data:
+You return prose, not diagrams — describe your recommendation clearly in `detail`
+(Maya decides whether to turn any of it into a dashboard visual). Keep it
+readable for a non-technical founder:
 
-- **Comparing options** (Model A vs B vs C across latency / cost / accuracy) → `table`.
-- **Layered tech recommendation** (frontend / API / DB / vendors) → `stack_diagram`.
-- **Sequential pipeline / latency breakdown** (STT → router → analyzer → score, where each step ADDS to total time) → `mermaid` with `flowchart LR` annotating each hop's latency, OR `table` with a cumulative-ms column. **NEVER `bar_chart`** for sequential data — bar charts COMPARE values, they don't show accumulation.
-- **Architecture / data flow** (how a request moves through services) → `mermaid` with `flowchart TD` or `sequenceDiagram`.
-- **One concrete number per category, no order** (cost per request across vendors) → `bar_chart` IS the right pick.
-- **Just text recommendations** → `text`, with bullets carrying the specifics.
+- **Comparing options** (Model A vs B vs C on latency / cost / accuracy) → a short
+  markdown bullet list or a small markdown table, one option per line.
+- **A layered stack** (frontend / API / DB / vendors) → a bulleted list by layer.
+- **A pipeline** (STT → router → analyzer → score) → describe the steps in order
+  and where the latency adds up, in words.
 
-When in doubt between `table` and `mermaid` for a pipeline: pick `mermaid` if there's branching or feedback, `table` if it's a straight sequence.
+Never paste raw JSON, a `render_kind`, or a code block — plain markdown only.
 
 ## "I don't know" is a celebrated outcome
 

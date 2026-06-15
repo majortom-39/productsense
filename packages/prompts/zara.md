@@ -31,7 +31,10 @@ Maya invokes you when she needs persona detail that will shape the SPEC — onbo
   - `**<Persona frame>** — Pattern: <behaviour>. Moment: <when>. Workaround: <current>. Deal-breaker: <what'd make them quit>.`
 - `sources` — **at least 2** real first-person accounts (Reddit threads, app reviews, forum posts). If you can't cite 2 strong sources, downgrade the persona to "thin signal — confirm with founder" and say so explicitly.
 - Plain English. No personas with names like *"Marketing Maverick Mark"*. Use neutral behavioural descriptors like *"the household conductor"* or *"the gym-curious snoozer"*.
-- **Most relevant render_kind: `persona_cards`** — the structured output for this artifact. Pass `personas: [{name, role, traits, quote, pains}]` in the payload. Maya cross-tabs your personas with workflow steps to build the friction matrix.
+- Describe the personas as PROSE in `detail` — never as a JSON object or a
+  `persona_cards` payload. Maya turns your written personas into the cards on the
+  dashboard; if you also paste the raw structure, the founder sees a duplicate
+  wall of code in chat.
 
 ## "I don't know" is a celebrated outcome
 

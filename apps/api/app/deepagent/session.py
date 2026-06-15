@@ -180,6 +180,64 @@ def _activity_label(tool_name: str, args: dict) -> Optional[str]:
     return None
 
 
+_FENCE_RE = re.compile(r"```[\s\S]*?```")
+_STRUCT_KEY_RE = re.compile(
+    r'"(render_kind|personas|payload|traits|quote|pains|columns|rows|nodes|edges)"', re.I
+)
+
+
+def _strip_struct_dumps(text: str) -> str:
+    """Remove machine-data dumps a specialist may have pasted into prose.
+
+    A specialist's `summary`/`detail` is founder-facing chat prose; structured
+    data (persona arrays, render payloads) belongs in an artifact, not the chat.
+    Some prompts still nudge specialists to emit a `render_kind`/`payload` JSON
+    object, so they paste it into `detail` — the "JSON wall". This removes:
+      - fenced code blocks (```...```), and
+      - any brace-balanced JSON object that carries a structural key.
+    Defensive belt to the prompt fix; guarantees a clean chat regardless of
+    model behaviour.
+    """
+    if not text:
+        return text
+    t = _FENCE_RE.sub("", text)
+    out: list[str] = []
+    i = 0
+    n = len(t)
+    while i < n:
+        if t[i] == "{":
+            depth, j = 0, i
+            while j < n:
+                if t[j] == "{":
+                    depth += 1
+                elif t[j] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            blob = t[i : j + 1]
+            if len(blob) > 80 and _STRUCT_KEY_RE.search(blob):
+                i = j + 1  # drop the data blob
+                continue
+            out.append(t[i])
+            i += 1
+        else:
+            out.append(t[i])
+            i += 1
+    return re.sub(r"\n{3,}", "\n\n", "".join(out)).strip()
+
+
+def _clean_specialist_payload(parsed: Any) -> Any:
+    """Sanitize a SpecialistResult's prose fields before it reaches the chat
+    or the persisted record."""
+    if not isinstance(parsed, dict):
+        return parsed
+    for field in ("summary", "detail"):
+        if isinstance(parsed.get(field), str):
+            parsed[field] = _strip_struct_dumps(parsed[field])
+    return parsed
+
+
 def _flatten(content: Any) -> str:
     """Flatten message content to text (Gemini may return a list of parts)."""
     if isinstance(content, str):
@@ -547,6 +605,9 @@ class DeepMayaSession:
                     parsed = None
             if name == "task":
                 sub = call_subagent.get(tcid, "")
+                # Strip any machine-data dumps from the specialist's prose so the
+                # chat never shows a JSON wall (structured data lives in artifacts).
+                parsed = _clean_specialist_payload(parsed)
                 self._emit("agent_result", {
                     "tool": "task",
                     "subagent": sub,
