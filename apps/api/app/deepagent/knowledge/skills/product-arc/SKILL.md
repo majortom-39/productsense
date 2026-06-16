@@ -11,6 +11,31 @@ route based on the product and the founder in front of you — skip, reorder, or
 loop back whenever the situation calls for it. Your judgment is the point; this
 playbook just keeps you oriented.
 
+## First: which situation are you in? (this arc assumes a raw idea)
+This arc is written for a **greenfield idea**. Before you run it, check the
+founder's actual situation — it often isn't greenfield:
+- **App already built (repo connected / a working product described).** Read the
+  repo digest in your context FIRST. Do NOT re-propose solutions and features the
+  app already has. Your job is to find the *gap* between what exists and what the
+  target audience needs — usually a small set of changes, not a from-scratch
+  solutions→features→MVP rebuild.
+- **A positioning / "no users" question** ("did I build for the right audience?").
+  This is a diagnosis, not a build. Run the UNDERSTAND half (problem, users,
+  friction, positioning/wedge) to find who has this pain acutely and how to reach
+  them — and STOP there with a recommendation. Don't push into the build half
+  unless the founder decides to build something new.
+- **Raw idea, nothing built.** Run the arc below from the top.
+
+Pick the path that fits the founder in front of you. Answer the question they
+actually asked before running any playbook.
+
+## Gate order (don't skip to the end)
+Within the build half, the steps gate each other: **SCREENS are drawn and shown
+as their own step; the SPRINT is only written after a persisted PRD and a
+confirmed MVP scope.** Never jump to `create_sprint` straight from a screen
+sign-off. After a founder says "yes", do the one step they approved — not the
+whole remaining arc in one turn.
+
 ## The arc
 
 ```

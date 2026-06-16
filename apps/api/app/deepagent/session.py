@@ -49,6 +49,18 @@ from app.services import messages as msg_store
 SENTINEL: Any = object()
 _TURN_TIMEOUT_SECONDS = 600  # research + several subagents can run long
 _RECURSION_LIMIT = 60
+# If Maya calls the SAME tool with the SAME args this many times in one turn,
+# she's looping (e.g. the create_sprint-with-empty-tasks runaway). Trip a clean
+# stop instead of burning minutes + tokens until the founder gives up.
+_MAX_IDENTICAL_TOOL_CALLS = 5
+
+
+class _LoopDetected(Exception):
+    """Raised when a turn repeats an identical tool call past the threshold."""
+
+    def __init__(self, tool: str):
+        self.tool = tool
+        super().__init__(f"loop detected on tool {tool!r}")
 
 _GREETING = "Hey, I'm Maya. Tell me a bit about the product you're looking to build."
 
@@ -422,6 +434,8 @@ class DeepMayaSession:
         # tool_call_id -> persisted agent_runs row id, so we can move the row
         # to its terminal state when the specialist returns.
         call_run_ids: dict[str, str] = {}
+        # (tool name + args) -> times called this turn — the loop tripwire.
+        call_counts: dict[str, int] = {}
         emitted_texts: set[str] = set()
         interrupted = False
 
@@ -466,7 +480,9 @@ class DeepMayaSession:
                     if not isinstance(msgs, list):
                         continue
                     for m in msgs:
-                        self._on_state_message(m, call_names, call_subagent, call_run_ids, _emit_text)
+                        self._on_state_message(
+                            m, call_names, call_subagent, call_run_ids, call_counts, _emit_text
+                        )
 
         try:
             await asyncio.wait_for(_drive(), timeout=_TURN_TIMEOUT_SECONDS)
@@ -477,6 +493,16 @@ class DeepMayaSession:
                 "That took longer than I allow myself, so I stopped midway. "
                 "Nothing is lost — say \"continue\" and I'll pick it back up, "
                 "or give me a narrower ask.",
+            )
+        except _LoopDetected as e:
+            # Maya repeated the same step many times — stop cleanly instead of
+            # spinning for minutes. Persisted so it survives a reload.
+            print(f"[DeepMayaSession] {e}")
+            self._save_and_emit_assistant(
+                "I caught myself repeating the same step over and over, so I "
+                "stopped rather than spin. That usually means I'm missing "
+                "something — could you tell me a bit more about what you want "
+                "next, and I'll take a cleaner path?",
             )
         except asyncio.CancelledError:
             raise
@@ -552,6 +578,7 @@ class DeepMayaSession:
         call_names: dict[str, str],
         call_subagent: dict[str, str],
         call_run_ids: dict[str, str],
+        call_counts: dict[str, int],
         emit_text,
     ) -> None:
         if isinstance(m, AIMessage):
@@ -562,6 +589,15 @@ class DeepMayaSession:
                 tcid = tc.get("id") or ""
                 args = tc.get("args") or {}
                 call_names[tcid] = name
+                # Loop tripwire: the SAME tool with the SAME args, over and over,
+                # is a runaway (not legitimate repeated work — that varies args).
+                try:
+                    sig = name + ":" + json.dumps(args, sort_keys=True, default=str)[:400]
+                except Exception:
+                    sig = name
+                call_counts[sig] = call_counts.get(sig, 0) + 1
+                if call_counts[sig] > _MAX_IDENTICAL_TOOL_CALLS:
+                    raise _LoopDetected(name)
                 if name == "task":
                     sub = args.get("subagent_type") or ""
                     call_subagent[tcid] = sub

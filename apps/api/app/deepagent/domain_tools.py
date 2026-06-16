@@ -710,8 +710,17 @@ def create_sprint(name: str, tasks: list[dict], subtitle: str | None = None) -> 
     spawning a duplicate. Returns the sprint + task count.
     """
     project_id = _project()
-    if not tasks:
-        return "Couldn't create the sprint — no tasks were given."
+    # Validate BEFORE creating anything. A list of empty/untitled task objects
+    # (e.g. tasks=[{}]) must NOT silently produce an empty sprint and a "success"
+    # — that gave the caller no signal and led to a runaway loop that spawned
+    # dozens of empty sprints. Require at least one real, titled task.
+    valid = [t for t in (tasks or []) if isinstance(t, dict) and (t.get("title") or "").strip()]
+    if not valid:
+        return (
+            "Couldn't create the sprint — no task had a title. Pass real tasks, "
+            "each with at least a `title` (plus goal/acceptance), or draft the "
+            "sprint first and try again."
+        )
     number = len(artifacts_service.list_sprints(project_id)) + 1
     sprint = artifacts_service.create_sprint(
         project_id=project_id, number=number, name=name, subtitle=subtitle
@@ -719,18 +728,12 @@ def create_sprint(name: str, tasks: list[dict], subtitle: str | None = None) -> 
     sprint_id = sprint.get("id")
     if not sprint_id:
         return "Couldn't create the sprint — the board insert failed."
-    created = 0
-    for i, t in enumerate(tasks, start=1):
-        if not isinstance(t, dict):
-            continue
-        title = (t.get("title") or "").strip()
-        if not title:
-            continue
+    for i, t in enumerate(valid, start=1):
         artifacts_service.create_task(
             project_id=project_id,
             sprint_id=sprint_id,
             display_id=f"T-{i}",
-            title=title,
+            title=(t.get("title") or "").strip(),
             goal=t.get("goal"),
             description=t.get("description"),
             acceptance=t.get("acceptance") if isinstance(t.get("acceptance"), list) else None,
@@ -741,8 +744,7 @@ def create_sprint(name: str, tasks: list[dict], subtitle: str | None = None) -> 
             prompt_brief=t.get("prompt_brief"),
             complexity=_norm_complexity(t.get("complexity")),
         )
-        created += 1
-    return f"Created sprint '{name}' with {created} task(s). It now shows on the Sprint tab."
+    return f"Created sprint '{name}' with {len(valid)} task(s). It now shows on the Sprint tab."
 
 
 @tool

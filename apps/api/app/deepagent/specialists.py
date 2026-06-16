@@ -92,9 +92,14 @@ def _build_subagent(name: str) -> dict:
         # raised straight through the task tool and killed Maya's whole turn —
         # the founder just saw her go silent.
         "response_format": ToolStrategy(SpecialistResult, handle_errors=True),
+        # ALWAYS set tools explicitly. deepagents inherits the COORDINATOR's full
+        # toolset into any subagent that omits this key — which gave Nora/Kai
+        # Maya's domain tools (create_sprint, write_prd, …). Kai then called
+        # create_sprint directly in a runaway loop. Specialists are isolated
+        # advisors: web agents get research tools, synthesis agents get NONE and
+        # return their work as a SpecialistResult for Maya to persist.
+        "tools": list(RESEARCH_TOOLS) if gets_web else [],
     }
-    if gets_web:
-        spec["tools"] = list(RESEARCH_TOOLS)
     return spec
 
 
