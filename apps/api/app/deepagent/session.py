@@ -37,6 +37,7 @@ import traceback
 from typing import Any, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langgraph.errors import GraphRecursionError
 from langgraph.types import Command
 
 from app.deepagent.coordinator import build_maya
@@ -48,7 +49,13 @@ from app.services import messages as msg_store
 
 SENTINEL: Any = object()
 _TURN_TIMEOUT_SECONDS = 600  # research + several subagents can run long
-_RECURSION_LIMIT = 60
+# Maya's OWN graph step budget (specialists run in their own subgraph budgets, so
+# this doesn't constrain research depth). A healthy turn — acknowledge, one round
+# of work, report back — sits well under 30 steps. The runaway that hit the old
+# 60-ceiling was Maya machine-gunning create_artifact/create_solution without ever
+# handing back to the founder. 45 leaves ample room for legit work while bounding
+# a no-yield spiral to seconds and ~$0.3 instead of 6 minutes and ~$1.
+_RECURSION_LIMIT = 45
 # If Maya calls the SAME tool with the SAME args this many times in one turn,
 # she's looping (e.g. the create_sprint-with-empty-tasks runaway). Trip a clean
 # stop instead of burning minutes + tokens until the founder gives up.
@@ -173,6 +180,10 @@ def _chip_summary(result_text: str) -> Optional[str]:
         r"Archived|Replaced|Resolved|Marked|Linked|Cleared)\b[\s:]*",
         "", s, flags=re.I,
     )
+    # Leading human-facing display code ("sol-2:", "f-3:", "d-1:") — these are
+    # internal bookkeeping ids the founder doesn't care about. Strip just the
+    # leading token, keep the title after it.
+    s = re.sub(r"^\s*(?:sol|feat|f|dec|d|q|art|task|t)-\d+\s*[:\-—]?\s*", "", s, flags=re.I)
     s = re.sub(r"\s+:", ":", s)
     s = re.sub(r"\s{2,}", " ", s).strip(" :—-\n")
     return s[:160] or None
@@ -504,6 +515,18 @@ class DeepMayaSession:
                 "something — could you tell me a bit more about what you want "
                 "next, and I'll take a cleaner path?",
             )
+        except GraphRecursionError:
+            # Maya ran her whole step budget without handing back — she tried to
+            # do too much in one turn (the create-everything spiral). The
+            # checkpointer kept her work; surface it honestly and steer her back to
+            # one-step-at-a-time, instead of the generic "snag" message.
+            print("[DeepMayaSession] GraphRecursionError: turn exceeded step budget")
+            self._save_and_emit_assistant(
+                "I got carried away there — I kept working through step after step "
+                "instead of pausing to check in with you. Everything I found is "
+                "saved. Tell me which part you want to focus on and I'll take it "
+                "one step at a time."
+            )
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -584,6 +607,15 @@ class DeepMayaSession:
         if isinstance(m, AIMessage):
             tool_calls = getattr(m, "tool_calls", None) or []
             text = _flatten(m.content)
+            # Emit the text FIRST, before the dispatch cards. Maya writes her
+            # acknowledgment before the tool calls in the same message, so the
+            # ack must render ABOVE the "Asking Iris / Zara / …" cards — events
+            # appear in the order they were generated. Persisting it first also
+            # keeps reload ordering correct (message.created_at < run.started_at).
+            if text:
+                # Text alongside tool calls is a preamble (input stays locked);
+                # text with no tool calls is Maya's final answer for the turn.
+                emit_text(text, awaiting_input=not tool_calls)
             for tc in tool_calls:
                 name = tc.get("name") or ""
                 tcid = tc.get("id") or ""
@@ -623,10 +655,6 @@ class DeepMayaSession:
                             "label": _TOOL_LABELS.get(name, name),
                             "phase": "start",
                         })
-            if text:
-                # Text alongside tool calls is a preamble (input stays locked);
-                # text with no tool calls is Maya's final answer for the turn.
-                emit_text(text, awaiting_input=not tool_calls)
             return
 
         if isinstance(m, ToolMessage):

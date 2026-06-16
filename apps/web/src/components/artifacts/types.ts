@@ -182,6 +182,25 @@ export interface WireframeFlowPayload {
 const isStringArr = (v: unknown): v is string[] =>
   Array.isArray(v) && v.every((x) => typeof x === "string");
 
+/** Coerce a field that SHOULD be a string[] but that the model often emits as a
+ *  single string (or a list with stray non-strings). Splits a delimited string
+ *  into parts; wraps a plain string as one item; drops empties. This is why
+ *  persona traits/pains never crash the card again — see the `.map()` site in
+ *  PersonaCardsCard. */
+const toStringList = (v: unknown): string[] => {
+  if (Array.isArray(v)) {
+    return v
+      .map((x) => (typeof x === "string" ? x : x == null ? "" : String(x)))
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  if (typeof v === "string") {
+    const parts = v.split(/\s*[;\n•]\s*/).map((s) => s.trim()).filter(Boolean);
+    return parts.length > 0 ? parts : [];
+  }
+  return [];
+};
+
 const isMatrixRow = (v: unknown): v is (string | number | null)[] =>
   Array.isArray(v) &&
   v.every((x) => x === null || typeof x === "string" || typeof x === "number");
@@ -302,18 +321,22 @@ export function parseGraph(p: unknown): GraphPayload | null {
 export function parsePersonaCards(p: unknown): PersonaCardsPayload | null {
   if (!p || typeof p !== "object") return null;
   const obj = p as Record<string, unknown>;
-  if (
-    !Array.isArray(obj.personas) ||
-    !obj.personas.every(
-      (x) =>
-        x &&
-        typeof x === "object" &&
-        typeof (x as { name?: unknown }).name === "string",
-    )
-  ) {
-    return null;
-  }
-  return { personas: obj.personas as PersonaCardsPayload["personas"] };
+  if (!Array.isArray(obj.personas)) return null;
+  // Normalize each persona: name is required; traits/pains are coerced to
+  // string[] because the model frequently emits them as a single string,
+  // which used to crash PersonaCardsCard's `.map()` and white-screen the tab.
+  const personas = obj.personas
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+    .map((x) => ({
+      name: typeof x.name === "string" ? x.name : "",
+      role: typeof x.role === "string" ? x.role : undefined,
+      quote: typeof x.quote === "string" ? x.quote : undefined,
+      traits: toStringList(x.traits),
+      pains: toStringList(x.pains),
+    }))
+    .filter((p) => p.name);
+  if (personas.length === 0) return null;
+  return { personas };
 }
 
 export function parseMermaid(p: unknown): MermaidPayload | null {

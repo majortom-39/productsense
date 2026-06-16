@@ -57,6 +57,47 @@ def _norm_complexity(value):
     v = str(value).strip().lower()
     return v if v in VALID_COMPLEXITY else None
 
+
+def _as_str_list(value) -> list[str]:
+    """Coerce a field that should be a list of short strings. Gemini frequently
+    emits a single delimited string here (e.g. persona `traits`), which used to
+    crash the frontend card's `.map()` and white-screen the Discovery tab. Split
+    a string on common delimiters; wrap stray scalars; drop empties."""
+    if isinstance(value, list):
+        return [str(x).strip() for x in value if str(x).strip()]
+    if isinstance(value, str):
+        return [p.strip() for p in re.split(r"\s*[;\n•]\s*", value) if p.strip()]
+    return []
+
+
+def _coerce_payload(payload: dict | None) -> dict:
+    """Normalize known crash-shaped payloads BEFORE persisting, so the DB never
+    stores a card that breaks the renderer. Key-driven (not render_kind-driven)
+    so it protects both create and update. Mirrors the frontend defensive parsers
+    in apps/web/.../artifacts/types.ts."""
+    p = dict(payload or {})
+    if isinstance(p.get("personas"), list):
+        p["personas"] = [
+            {
+                **persona,
+                "traits": _as_str_list(persona.get("traits")),
+                "pains": _as_str_list(persona.get("pains")),
+            }
+            for persona in p["personas"]
+            if isinstance(persona, dict)
+        ]
+    if isinstance(p.get("layers"), list):
+        p["layers"] = [
+            {**layer, "items": _as_str_list(layer.get("items"))}
+            for layer in p["layers"]
+            if isinstance(layer, dict)
+        ]
+    if isinstance(p.get("rows"), list):
+        # Table rows must each be a list of cells; wrap stray scalars so the
+        # table survives instead of degrading to a plain text card.
+        p["rows"] = [r if isinstance(r, list) else [r] for r in p["rows"]]
+    return p
+
 # Set by the app/coordinator per run; tools read it implicitly.
 _project_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "deepagent_project_id", default=None
@@ -336,7 +377,7 @@ def create_artifact(
         project_id=project_id,
         title=title,
         render_kind=render_kind,
-        payload=payload or {},
+        payload=_coerce_payload(payload),
         summary=summary,
     )
     ref = f"artifact:{row['id']}"
@@ -378,7 +419,7 @@ def update_artifact(
             title=title,
             summary=summary,
             render_kind=render_kind,
-            payload=payload,
+            payload=_coerce_payload(payload) if payload is not None else None,
         )
     except ValueError as e:
         return f"Couldn't update artifact:{artifact_id} — {e}"

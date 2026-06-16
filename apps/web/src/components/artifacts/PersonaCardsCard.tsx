@@ -18,7 +18,11 @@ export function PersonaCardsCard({ payload }: { payload: PersonaCardsPayload }) 
   }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {personas.map((p, i) => (
+      {personas.map((p, i) => {
+        // Backstop: parser already coerces these, but never trust the shape.
+        const traits = Array.isArray(p.traits) ? p.traits : [];
+        const pains = Array.isArray(p.pains) ? p.pains : [];
+        return (
         <article
           key={i}
           className="rounded-xl border border-border bg-card p-3.5 flex flex-col gap-2.5"
@@ -39,9 +43,9 @@ export function PersonaCardsCard({ payload }: { payload: PersonaCardsPayload }) 
             </div>
           </header>
 
-          {p.traits && p.traits.length > 0 && (
+          {traits.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {p.traits.map((t, j) => (
+              {traits.map((t, j) => (
                 <span
                   key={j}
                   className="px-1.5 py-0.5 rounded bg-muted text-[10.5px] text-foreground/75 border border-border"
@@ -59,13 +63,13 @@ export function PersonaCardsCard({ payload }: { payload: PersonaCardsPayload }) 
             </blockquote>
           )}
 
-          {p.pains && p.pains.length > 0 && (
+          {pains.length > 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">
                 Pain points
               </p>
               <ul className="space-y-1">
-                {p.pains.map((pain, j) => (
+                {pains.map((pain, j) => (
                   <li
                     key={j}
                     className="text-[11.5px] text-foreground/80 leading-relaxed pl-2.5 relative"
@@ -78,7 +82,8 @@ export function PersonaCardsCard({ payload }: { payload: PersonaCardsPayload }) 
             </div>
           )}
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 }

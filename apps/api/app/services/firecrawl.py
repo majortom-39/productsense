@@ -23,6 +23,8 @@ except Exception:  # firecrawl optional during install/dev
 
 
 _CRAWL_TIMEOUT_S = 45.0
+_SEARCH_TIMEOUT_S = 25.0  # snippet search is fast; cap a stuck call so one slow
+                         # search can't stall a whole specialist
 _MAX_CONTENT_CHARS = 2000
 
 _client: Optional["AsyncFirecrawl"] = None
@@ -40,14 +42,21 @@ def _get_client() -> "AsyncFirecrawl":
     return _client
 
 
-async def web_search(query: str, limit: int = 5) -> str:
+async def web_search(query: str, limit: int = 6) -> str:
+    # NOTE: deliberately NO scrape_options. Passing ScrapeOptions(formats=["markdown"])
+    # makes firecrawl fully scrape the page body of every result, which turned a
+    # single search into a 30-60s call — multiplied across several searches per
+    # specialist, that was the bulk of a multi-minute turn. The result SNIPPETS
+    # (title + url + description) are enough for synthesis; a specialist that needs
+    # the full text of one page calls crawl_website(url) on just that page.
     try:
         client = _get_client()
-        result = await client.search(
-            query=query,
-            limit=limit,
-            scrape_options=ScrapeOptions(formats=["markdown"]),
+        result = await asyncio.wait_for(
+            client.search(query=query, limit=limit),
+            timeout=_SEARCH_TIMEOUT_S,
         )
+    except asyncio.TimeoutError:
+        return f"[web_search timeout] {query}"
     except Exception as e:
         return f"[web_search error] {str(e)[:200]}"
 
@@ -58,8 +67,8 @@ async def web_search(query: str, limit: int = 5) -> str:
     for i, item in enumerate(items, 1):
         title = getattr(item, "title", "") or "(no title)"
         url = getattr(item, "url", "") or ""
-        md = getattr(item, "markdown", "") or getattr(item, "description", "") or ""
-        parts.append(f"\n**[{i}] {title}**\n{url}\n{md[:_MAX_CONTENT_CHARS].strip()}")
+        snippet = getattr(item, "description", "") or getattr(item, "markdown", "") or ""
+        parts.append(f"\n**[{i}] {title}**\n{url}\n{snippet[:_MAX_CONTENT_CHARS].strip()}")
     return "\n---\n".join(parts)
 
 
