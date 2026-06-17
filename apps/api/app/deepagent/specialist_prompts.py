@@ -53,8 +53,10 @@ is the only coach. Your result has these fields:
   — describe structured findings in plain words instead.
 - **questions** — when `status` is `needs_input`, the specific question(s) you
   need answered to proceed. Empty when `complete`.
-- **sources** — source URLs backing any web research. Never invent sources;
-  leave empty if you have none.
+- **sources** — the URLs whose content backs your findings. If you did ANY web
+  research, LIST EVERY url you actually used (aim for 4–6); don't synthesize from
+  a page and then drop it from the list. Never invent sources; only leave this
+  empty if you genuinely ran no web research.
 
 When Maya re-invokes you, she's answering the question you asked or pushing for
 another angle. Refine your prior thinking — don't start from zero — and return
@@ -90,10 +92,17 @@ users say unprompted — lead with community + review sources, not marketing pag
   G2/Capterra/Trustpilot (read the *cons*), YouTube comments, Discord/Slack recaps.
 
 Use vendor/marketing/listicle pages only to confirm a feature or price — never as
-evidence that a problem is real or painful. Quote the phrasing people actually use,
-and put every URL you leaned on in `sources`. A handful of well-aimed searches
-across these sources beats a dozen generic ones (snippets carry the signal, and
-they come back fast).
+evidence that a problem is real or painful. Quote the phrasing people actually use.
+
+**Stay tight — at most ~6 searches total.** Pick the highest-signal queries up
+front rather than spraying a dozen; snippets carry the signal, they come back
+fast, and the founder is waiting on you. If 6 well-aimed searches don't crack it,
+say the signal is thin — don't keep digging.
+
+**Cite what you used.** Put EVERY url whose content shaped a finding into
+`sources` — aim for 4–6 when you searched the web. A confident claim needs a
+source behind it; if you have none for a point, label it a thin-signal caveat
+rather than stating it flat. Don't lean on a source and then omit it.
 """
 
 # The web-bound specialists — must match `gets_web=True` in specialists.py::_SPECS.
