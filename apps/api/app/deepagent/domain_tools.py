@@ -196,25 +196,42 @@ def _wire_edges(
     if not targets:
         return []
     project_id = _project()
-    ntype, nid = _parse_ref(node_ref)
+    try:
+        ntype, nid = _parse_ref(node_ref)
+    except ValueError:
+        return []
     wired: list[str] = []
     for target in targets:
-        ttype, tid = _parse_ref(target)
+        # Never let a single bad ref crash the whole turn. A hallucinated or
+        # malformed `derived_from`/`constrains` ref used to raise ValueError
+        # ("No such node …") straight out of add_dependency — a benchmark run
+        # hit exactly this and the founder got the generic "snag". Skip the bad
+        # edge instead; create_artifact still pre-reports via _missing_refs, and
+        # the other create tools just drop the phantom edge rather than die.
+        try:
+            ttype, tid = _parse_ref(target)
+        except ValueError:
+            continue
+        if not depgraph.node_exists(project_id, ttype, tid):
+            continue
         if relationship == "constrains":
             dep_type, dep_id, on_type, on_id = ttype, tid, ntype, nid
         else:
             dep_type, dep_id, on_type, on_id = ntype, nid, ttype, tid
-        depgraph.add_dependency(
-            project_id=project_id,
-            dependent_type=dep_type,
-            dependent_id=dep_id,
-            depends_on_type=on_type,
-            depends_on_id=on_id,
-            relationship=relationship,  # type: ignore[arg-type]
-            created_by=created_by,
-            why=None,
-        )
-        wired.append(target)
+        try:
+            depgraph.add_dependency(
+                project_id=project_id,
+                dependent_type=dep_type,
+                dependent_id=dep_id,
+                depends_on_type=on_type,
+                depends_on_id=on_id,
+                relationship=relationship,  # type: ignore[arg-type]
+                created_by=created_by,
+                why=None,
+            )
+            wired.append(target)
+        except ValueError:
+            continue
     return wired
 
 

@@ -130,8 +130,16 @@ async def run_once(model, rep):
             agent.ainvoke({"messages": [HumanMessage(content=SCENARIO)]},
                           config={"recursion_limit": 45, "callbacks": [cb]}), timeout=450)
         for m in res.get("messages", []):
-            if isinstance(m, AIMessage) and isinstance(m.content, str) and m.content.strip():
-                maya_texts.append(m.content.strip())
+            if not isinstance(m, AIMessage):
+                continue
+            # Gemini returns content as a list of blocks ([{type:text,text:...}]),
+            # not a plain str — flatten it so we actually capture the synthesis.
+            c = m.content
+            if isinstance(c, list):
+                c = " ".join(b.get("text", "") for b in c
+                              if isinstance(b, dict) and b.get("type") == "text")
+            if isinstance(c, str) and c.strip():
+                maya_texts.append(c.strip())
     except Exception as e:
         status = f"{type(e).__name__}: {str(e)[:150]}"
     wall = time.perf_counter() - t0
