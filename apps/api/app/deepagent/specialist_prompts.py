@@ -64,6 +64,47 @@ Project vocabulary: never say "v1". The first ship is always the **MVP**.
 """
 
 
+# Appended ONLY to web-bound specialists (Iris, Aiden, Zara, Hugo, Theo). The
+# synthesis specialists (Nora, Kai) have no web tools, so this would be noise.
+# The thesis: the best evidence is first-person — how real people describe the
+# problem in their own words — not vendor marketing or SEO listicles.
+_RESEARCH_GROUNDING = """
+---
+
+## Where the real signal is (ground every claim in first-person voices)
+
+Your tools: `web_search`, `reddit_research`, `crawl_website`. They all accept
+search operators (`site:`, quotes, `OR`). The strongest evidence is what real
+users say unprompted — lead with community + review sources, not marketing pages:
+
+- **Reddit — threads AND their comments.** Use `reddit_research` heavily. The
+  comments under a thread are where the gold is: complaints, workarounds, "I tried
+  X and dropped it because…", "I wish it could…". Read what people actually typed.
+- **App store / Play Store reviews.** Go straight for the negative ones — the 1–3★
+  reviews are where the unmet need lives. Search like
+  `web_search("<product> app store reviews complaints")`,
+  `web_search("site:apps.apple.com <product>")`,
+  `web_search("site:play.google.com <product> reviews")`, then `crawl_website` the
+  review page to read the actual text.
+- **Other first-person sources** — niche forums, Hacker News threads + comments,
+  G2/Capterra/Trustpilot (read the *cons*), YouTube comments, Discord/Slack recaps.
+
+Use vendor/marketing/listicle pages only to confirm a feature or price — never as
+evidence that a problem is real or painful. Quote the phrasing people actually use,
+and put every URL you leaned on in `sources`. A handful of well-aimed searches
+across these sources beats a dozen generic ones (snippets carry the signal, and
+they come back fast).
+"""
+
+# The web-bound specialists — must match `gets_web=True` in specialists.py::_SPECS.
+_WEB_BOUND = frozenset({"iris", "aiden", "zara", "hugo", "theo"})
+
+
 def build_specialist_prompt(name: str) -> str:
-    """Persona body for `<name>` + the structured-output contract block."""
-    return load(name) + _OUTPUT_CONTRACT
+    """Persona body for `<name>` + the structured-output contract block. Web-bound
+    specialists also get the research-grounding directive (Reddit/app-store/community
+    first), since that's where the best evidence lives."""
+    prompt = load(name) + _OUTPUT_CONTRACT
+    if name in _WEB_BOUND:
+        prompt += _RESEARCH_GROUNDING
+    return prompt
