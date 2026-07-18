@@ -1,34 +1,55 @@
 # Agents
 
+There is exactly **one** agent.
+
 | Agent | Role | Model | Tools |
 |---|---|---|---|
-| **Maya** | Orchestrator | Gemini 3.1 Pro thinking-medium | Invokes any sub-agent + pure functions |
-| **Iris** | Problem Validator | Gemini 3.1 Flash Lite | Firecrawl |
-| **Aiden** | Competitor Mapper | Gemini 3.1 Flash Lite | Firecrawl |
-| **Hugo** | Risk Researcher | Gemini 3.1 Flash Lite | Firecrawl |
-| **Zara** | User Researcher | Gemini 3.1 Flash Lite | Firecrawl |
-| **Theo** | Tech Advisor | Gemini 3.1 Flash Lite | Firecrawl |
-| **Nora** | PRD Writer | Gemini 3.1 Flash Lite | (project context only) |
-| **Kai** | Sprint Planner | Gemini 3.1 Flash Lite | (project context only) |
-| **Wes** | Guardrail Compiler | Gemini 3.1 Flash Lite | (project context only) |
+| **Maya** | AI product manager — the only voice the founder hears | Gemini 3.1 Pro, dynamic thinking (HIGH) | `ask_founder` · ~30 domain tools · 3 research tools |
 
-## Sub-agent invariants
+The former sub-agent team (Iris, Zara, Aiden, Hugo, Theo, Nora, Kai, Remy, Wes)
+was removed in June 2026 — first the synthesis agents (Maya authors the PRD and
+sprint herself), then the research agents (Maya holds the web tools directly).
+Rationale + benchmarks: see [ARCHITECTURE.md](ARCHITECTURE.md) "Why no sub-agents".
+The only entry left in the deepagents `subagents` list is a neutered
+`general-purpose` placeholder whose sole job is to suppress the framework's
+default all-tools agent.
 
-- Every sub-agent follows the contract in `packages/prompts/_contract.md`.
-- Sub-agents NEVER chat with the founder.
-- Sub-agents NEVER invoke other sub-agents (no recursion).
-- Maya NEVER exposes sub-agent names in founder chat.
-- Each sub-agent invocation has a hard budget (max calls, max tokens, max turns).
+## Maya's tools
+
+- **`ask_founder`** — steering interrupt. Pauses the turn, puts a decision in
+  front of the founder, resumes on answer (resumable via the Postgres
+  checkpointer).
+- **Domain tools (~30)** — `apps/api/app/deepagent/domain_tools.py`. Create/update
+  artifacts, personas, solutions, features, PRD sections (`write_prd_section`),
+  decisions, sprints, tasks; `read_attachment` for founder uploads. All write to
+  Supabase and emit dashboard events.
+- **Research tools (3)** — `apps/api/app/deepagent/research_tools.py`:
+  `web_search`, `reddit_research`, `crawl_website` (Firecrawl). Hard budget of
+  **5 searches per turn**; raw results are pruned from history after each turn.
+
+## Behavioral invariants
+
+- Maya is the only chat participant. Tool names and internals never surface in
+  founder chat.
+- **Think first, search rarely.** Maya defaults to her own knowledge; research
+  tools are for claims that need live, real-world backing (evidence of demand,
+  competitor facts, pricing) — never for things she already knows.
+- One move per turn — she never runs the whole product arc in a single turn.
+- Founder-facing language is plain English; every artifact must be readable by a
+  non-technical founder.
+- Maya pushes back: forces scope choices, refuses "all of it", names the riskiest
+  assumption.
+- Anything needing the founder's brain becomes an open question on the Decisions
+  tab (or an `ask_founder` interrupt mid-turn) — not buried in prose.
 
 ## Where prompts live
 
-`packages/prompts/<agent>.md`. Version-controlled, hand-edited. Loaded at backend startup.
-
-## Adding a new sub-agent
-
-Tier 2 sub-agents (planned, not in v1):
-- Real-User Signal Synthesizer — for shipped products
-- Pricing & GTM Advisor — for pre-launch / shipped
-- UX Pattern Researcher — for stuck-mid-build moments
-
-To add: write a `<name>.md` prompt, add a module to `apps/api/app/agents/`, register the tool with Maya. The contract and invocation framework stay the same.
+- **Maya's system prompt** is code: `MAYA_SYSTEM_PROMPT` in
+  `apps/api/app/deepagent/coordinator.py` — edit it there.
+- `packages/prompts/*.md` holds persona/voice material loaded at startup
+  (`app/services/prompts.py`) plus the legacy specialist prompts, which are kept
+  only as reference and for the research A/B benchmark
+  (`scripts/bench_research_ab.py`).
+- The `product-arc` skill (how to run the idea → PRD → sprint arc) lives at
+  `apps/api/app/deepagent/knowledge/skills/product-arc/SKILL.md` and is loaded
+  read-only into the agent.

@@ -35,11 +35,12 @@ A new generation of founders can *build* — they have Claude Code, Cursor, Lova
 
 You talk to Maya in plain English — *"I want to build X"* or *"I shipped X and nobody's using it."* She:
 
-1. **Researches it for real** — dispatches a team of specialists who dig through Reddit threads, app-store reviews, competitor pages, and forums for first-person evidence (not marketing fluff).
+1. **Thinks first, researches when it matters** — Maya reasons from her own product sense, and reaches for live web research only when a claim needs real-world backing: Reddit threads, app-store reviews, competitor pages, forums — first-person evidence, not marketing fluff.
 2. **Pushes back** — she's a coach, not a yes-man. She forces scope decisions, names the riskiest assumption, and refuses "all of it."
 3. **Writes the spec** — a plain-language PRD, target users, positioning/wedge, the MVP cut, and greyscale screens — all readable by a non-technical founder.
 4. **Builds the sprint board** — intent-level tasks your coding agent can actually pick up.
-5. **Closes the loop over MCP** — your coding agent connects to the board, pulls tasks, builds, and reports progress back. Maya re-plans the next sprint with you, grounded in what actually got built.
+5. **Grounds in your repo** — connect a GitHub repo and Maya ingests a digest (README, packages, file tree) so her tech advice matches the codebase you actually have.
+6. **Closes the loop over MCP** — your coding agent connects to the board, pulls tasks, builds, and reports progress back. Maya re-plans the next sprint with you, grounded in what actually got built.
 
 > Maya owns *what to build and why.* Your coding agent owns *how.* ProductSense is the missing handshake between them.
 
@@ -48,8 +49,9 @@ You talk to Maya in plain English — *"I want to build X"* or *"I shipped X and
 ```mermaid
 flowchart LR
     F([👤 Founder]) -->|chats in plain English| M{{🧠 Maya · AI PM}}
-    M -->|delegates research| S[🔎 Specialist team<br/>Iris · Zara · Aiden · Hugo · Theo]
-    S -->|Reddit · reviews · competitors| M
+    M -->|searches only when claims need backing| W[🔎 Live web research<br/>Reddit · reviews · competitors]
+    W --> M
+    G[🐙 Your GitHub repo] -->|repo digest| M
     M -->|drafts| P[📄 PRD + screens]
     M -->|plans| B[📋 Sprint board]
     B -->|exposed over MCP| C([🤖 Your coding agent<br/>Claude Code · Cursor · …])
@@ -57,27 +59,23 @@ flowchart LR
     M -->|re-plans next sprint| B
 ```
 
-Maya is the **only** voice the founder hears. Under the hood she orchestrates a team of specialists as tools — each runs in isolation, grounds its work in live web research, and returns a structured result Maya synthesizes and coaches from.
+Maya is a **single agent** — one Gemini 3.1 Pro brain with dynamic thinking that holds every tool herself. No sub-agents, no delegation chain: the model that coaches you is the same model that reads the evidence, so nothing gets lost in translation between a "researcher" and a "synthesizer."
 
-## Meet the team
+## One brain, three kinds of tools
 
-| Agent | Role | What they bring back |
-|------|------|----------------------|
-| **Maya** | **AI Product Manager** (orchestrator) | The only one you talk to. Coaches, pushes back, runs the team, and owns the product record. |
-| Iris | Problem Validator | Real-world evidence the problem is worth solving |
-| Zara | User Researcher | Who the users *actually* are, in their own words |
-| Aiden | Competitor Mapper | Who else solves this — and where the gaps are |
-| Hugo | Risk Researcher | The likely failure modes, ranked |
-| Theo | Tech Advisor | A build approach + the trade-offs your agent will hit |
-| Nora | PRD Writer | Research turned into a decision-ready spec |
-| Kai | Sprint Planner | The spec turned into an intent-level sprint board |
+| Tools | What they do |
+|------|--------------|
+| `ask_founder` | The steering interrupt — Maya pauses mid-turn to put a real decision in front of you, and resumes when you answer. |
+| Domain tools (~30) | Everything that writes the product record: artifacts, personas, solutions, features, PRD sections, decisions, sprints, `read_attachment` for your uploaded docs. All backed by Supabase. |
+| Research tools (3) | `web_search` · `reddit_research` · `crawl_website`, via Firecrawl. Hard budget of 5 searches per turn; raw results are pruned from context after each turn once synthesized. |
 
 ## What makes it different
 
-- **Research grounded in real voices.** Specialists lead with Reddit threads + comments, app-store reviews (the 1–3★ ones), and forums — where the unmet need actually lives — over vendor marketing.
+- **Research grounded in real voices.** Maya leads with Reddit threads + comments, app-store reviews (the 1–3★ ones), and forums — where the unmet need actually lives — over vendor marketing. And she only searches when a claim needs it; general product judgment comes from her own reasoning.
 - **A coherence graph, not a doc dump.** Every artifact (problem → users → friction → positioning → PRD → sprint) is a node wired to what it came from. Change one upstream and everything downstream is flagged for review. The database — not chat history — is the source of truth.
 - **Living artifacts.** Nothing is write-once. Maya edits cards, supersedes stale ones, and keeps the record coherent across sessions and across your agent's build.
 - **A conversation, not a firehose.** One move per turn, then she hands back to you. No 1,300-line spec for a date picker.
+- **Repo-grounded tech advice.** The GitHub digest keeps Maya honest about your stack and file layout — no hallucinated components.
 - **The MCP loop.** The sprint board is a hosted, key-authed MCP endpoint — your coding agent pulls work and reports progress, turning the PRD into a live build cycle.
 
 ## Tech stack
@@ -86,16 +84,17 @@ Maya is the **only** voice the founder hears. Under the hood she orchestrates a 
 |------|--------|
 | Frontend | React 18 · Vite · Tailwind · shadcn/ui |
 | Backend | Python 3.12 · FastAPI |
-| Agents | [`deepagents`](https://github.com/langchain-ai/deepagents) on LangGraph — coordinator + isolated sub-agents |
-| LLM | Vertex AI · **Gemini 3.1 Pro** (Maya, dynamic thinking) · Gemini Flash tiers (specialists) |
+| Agent | [`deepagents`](https://github.com/langchain-ai/deepagents) on LangGraph — a single coordinator holding all tools, with a Postgres checkpointer and context summarization |
+| LLM | Vertex AI · **Gemini 3.1 Pro** (dynamic thinking) |
 | Data + auth | Supabase (Postgres) |
 | Web research | Firecrawl |
+| Repo grounding | GitHub OAuth + repo-digest ingestion |
 | Coding-agent bridge | Hosted **MCP** (Streamable HTTP), key-authed, served by the API |
-| Infra | Google Cloud Run · Secret Manager · LangSmith tracing |
+| Infra | Google Cloud Run (scale-to-zero) · Secret Manager · LangSmith tracing |
 
-### A note on model choice
+### A note on architecture
 
-Maya runs on **Gemini 3.1 Pro with dynamic thinking**. In our own A/B benchmark against 3.5 Flash (same scenario, identical specialists), the larger orchestrator was **more reliable** (3/3 vs 2/3 clean completions), **more complete**, and — counterintuitively — **~35% cheaper per turn**, because better orchestration means fewer wasted steps and lower token burn. Reproduce it yourself: [`apps/api/scripts/bench_compare.py`](apps/api/scripts/bench_compare.py).
+Maya started life as an orchestrator with a team of Flash-tier research sub-agents. We killed the team. Two A/B benchmarks drove it: a Pro orchestrator beat a Flash one on reliability *and* cost ([`apps/api/scripts/bench_compare.py`](apps/api/scripts/bench_compare.py)), and Pro doing its own research beat a Flash sub-agent doing the same task with the same tools — the Pro brain caught a false premise the sub-agent happily built on ([`scripts/bench_research_ab.py`](scripts/bench_research_ab.py)). The lesson: don't put a weaker model in the thinking path. Context stays lean without isolation because raw search results are pruned after each turn.
 
 ## Project structure
 
@@ -103,13 +102,14 @@ Maya runs on **Gemini 3.1 Pro with dynamic thinking**. In our own A/B benchmark 
 ProductSense/
 ├── apps/
 │   ├── web/     React founder UI (chat + PRD / Sprint / Decisions / Screens tabs)
-│   ├── api/     FastAPI — Maya coordinator, the specialist team, domain tools,
-│   │            the coherence graph, and the hosted MCP endpoint
+│   ├── api/     FastAPI — the Maya agent, domain + research tools, the coherence
+│   │            graph, GitHub integration, and the hosted MCP endpoint
 │   └── mcp/     MCP server bits for the coding-agent bridge
 ├── packages/
-│   ├── prompts/        specialist system prompts (markdown)
+│   ├── prompts/        prompt files (markdown), loaded at backend startup
 │   └── shared-types/   shared TypeScript types
 ├── supabase/migrations/   schema (projects, artifacts, decisions, sprints, …)
+├── scripts/               benchmarks (end-to-end + research A/B)
 ├── docs/                  architecture, MCP, design notes
 └── pnpm-workspace.yaml
 ```
